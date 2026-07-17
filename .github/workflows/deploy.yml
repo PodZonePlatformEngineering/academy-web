@@ -1,0 +1,48 @@
+name: Deploy to GitHub Pages
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+concurrency:
+  group: pages
+  cancel-in-progress: false
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - run: npm run build
+      - name: Secrets gate — architecture v2 §5 (no credentials in the public bundle)
+        run: |
+          PATTERNS='postgres(ql)?://|neon\.tech|AKIA[0-9A-Z]{16}|-----BEGIN|ghp_[A-Za-z0-9]{36}|gho_[A-Za-z0-9]{36}|github_pat_|\bsk-[A-Za-z0-9_-]{24}|eyJhbGciOi|client_secret|GOCSPX-'
+          if grep -rInE "$PATTERNS" dist/; then
+            echo '::error::Secret-like pattern found in built bundle — §5 violation, refusing to deploy'
+            exit 1
+          fi
+          echo 'Bundle clean.'
+      - uses: actions/upload-pages-artifact@v3
+        with:
+          path: dist
+
+  deploy:
+    needs: build
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - id: deployment
+        uses: actions/deploy-pages@v4
