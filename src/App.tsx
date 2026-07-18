@@ -12,8 +12,10 @@ import {
   signOut,
   type AuthUser,
 } from '@/lib/auth'
+import { tutorConfigured } from '@/lib/tutorConfig'
 import Catalogue from '@/pages/Catalogue'
 import Curriculum from '@/pages/Curriculum'
+import Keys from '@/pages/Keys'
 
 function AuthControls() {
   const [user, setUser] = useState<AuthUser | null>(null)
@@ -67,6 +69,11 @@ function Shell({ children }: { children: React.ReactNode }) {
             <Link to="/catalogue" className="text-sm text-muted-foreground hover:text-foreground">
               Catalogue
             </Link>
+            {tutorConfigured && (
+              <Link to="/keys" className="text-sm text-muted-foreground hover:text-foreground">
+                Your keys
+              </Link>
+            )}
           </div>
           <div className="flex items-center gap-2">
             {demoMode && <Badge variant="outline">demo data — backend not connected</Badge>}
@@ -118,6 +125,7 @@ export default function App() {
           <Route path="/" element={<Home />} />
           <Route path="/catalogue" element={<Catalogue />} />
           <Route path="/curriculum/:slug" element={<Curriculum />} />
+          <Route path="/keys" element={<Keys />} />
           <Route path="*" element={<NotFound />} />
         </Routes>
       </Shell>
