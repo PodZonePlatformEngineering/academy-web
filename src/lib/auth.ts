@@ -42,6 +42,15 @@ function stackApp(): StackClientApp<true, string> {
         // which silently kills every sign-in click). BASE_URL is /academy-web/ on
         // Pages, / in dev; the SDK resolves it against the current origin.
         oauthCallback: import.meta.env.BASE_URL,
+        // Post-auth redirect targets and the error page default to origin-root
+        // /handler paths that don't exist on a Pages subpath deployment — after
+        // a successful code exchange the SDK navigates to afterSignIn (observed
+        // 404 at the origin root). Point everything at the app root.
+        home: import.meta.env.BASE_URL,
+        afterSignIn: import.meta.env.BASE_URL,
+        afterSignUp: import.meta.env.BASE_URL,
+        afterSignOut: import.meta.env.BASE_URL,
+        error: import.meta.env.BASE_URL,
       },
     })
   }
