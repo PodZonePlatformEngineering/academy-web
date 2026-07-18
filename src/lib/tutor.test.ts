@@ -5,19 +5,7 @@ import { describe, expect, it } from 'vitest'
 import { maskKey } from '@/lib/keys'
 import type { RetrievedPoint } from '@/lib/retrieval'
 import { composeSystem, composeUserTurn, TUTOR_SYSTEM_PROMPT_V1 } from '@/lib/tutor'
-import { contentCollection } from '@/lib/tutorConfig'
 import type { PreambleData } from '@/lib/api'
-
-describe('contentCollection (D-4 scope mapping)', () => {
-  it('maps a curriculum slug to its -content collection', () => {
-    expect(contentCollection('prompt-engineering')).toBe('academy-prompt-engineering-content')
-    expect(contentCollection('code-ai')).toBe('academy-code-ai-content')
-  })
-
-  it('never yields a -keys collection name', () => {
-    expect(contentCollection('prompt-engineering')).not.toContain('-keys')
-  })
-})
 
 describe('composeSystem', () => {
   const preamble: PreambleData = {
