@@ -1,16 +1,27 @@
 import { HashRouter, Link, Route, Routes } from 'react-router-dom'
 import { Badge } from '@/components/ui/badge'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
+import { demoMode } from '@/lib/api'
+import Catalogue from '@/pages/Catalogue'
+import Curriculum from '@/pages/Curriculum'
 
 function Shell({ children }: { children: React.ReactNode }) {
   return (
     <div className="min-h-screen bg-background text-foreground">
       <header className="border-b">
         <div className="mx-auto flex max-w-4xl items-center justify-between px-4 py-3">
-          <Link to="/" className="text-lg font-semibold">
-            PodZone Academy
-          </Link>
-          <Badge variant="secondary">MVP</Badge>
+          <div className="flex items-center gap-6">
+            <Link to="/" className="text-lg font-semibold">
+              PodZone Academy
+            </Link>
+            <Link to="/catalogue" className="text-sm text-muted-foreground hover:text-foreground">
+              Catalogue
+            </Link>
+          </div>
+          <div className="flex items-center gap-2">
+            {demoMode && <Badge variant="outline">demo data — backend not connected</Badge>}
+            <Badge variant="secondary">MVP</Badge>
+          </div>
         </div>
       </header>
       <main className="mx-auto max-w-4xl px-4 py-8">{children}</main>
@@ -22,13 +33,14 @@ function Home() {
   return (
     <Card>
       <CardHeader>
-        <CardTitle>Academy shell deployed</CardTitle>
+        <CardTitle>PodZone Academy</CardTitle>
         <CardDescription>
-          B1 scaffold — Vite + React + Tailwind v4 + shadcn/ui, served from GitHub Pages.
+          Curriculum-based training with an AI tutor — progress-first MVP.
         </CardDescription>
       </CardHeader>
       <CardContent className="text-sm text-muted-foreground">
-        Catalogue and module browser arrive with the auth build (P1.2 / P1.3).
+        Browse the <Link to="/catalogue" className="underline underline-offset-4">catalogue</Link>.
+        Sign-in (Neon Auth) arrives with the P1.2 wiring.
       </CardContent>
     </Card>
   )
@@ -53,6 +65,8 @@ export default function App() {
       <Shell>
         <Routes>
           <Route path="/" element={<Home />} />
+          <Route path="/catalogue" element={<Catalogue />} />
+          <Route path="/curriculum/:slug" element={<Curriculum />} />
           <Route path="*" element={<NotFound />} />
         </Routes>
       </Shell>
