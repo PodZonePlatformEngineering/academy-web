@@ -2,11 +2,13 @@
 //
 // The SDK is used without StackProvider/StackHandler on purpose: the SPA is
 // hash-routed on a Pages subpath, so the prebuilt handler routes would sit
-// awkwardly across the fragment boundary. The headless flow is unaffected:
-// signInWithOAuth() redirects out with the current URL as the return point
-// (validated against the project's trusted domains), the provider bounces
-// back with ?code=… in the query (before the hash, invisible to HashRouter),
-// and completeOAuthCallback() exchanges it on mount.
+// awkwardly across the fragment boundary. The return point must be configured
+// explicitly — the SDK defaults urls.oauthCallback to {origin}/handler/
+// oauth-callback (the StackHandler route), which does not exist here and 404s
+// on Pages. We point it at the app root (Vite BASE_URL: /academy-web/ in the
+// Pages build, / in dev); the provider bounces back with ?code=… in the query
+// (before the hash, invisible to HashRouter), and completeOAuthCallback()
+// exchanges it on mount.
 //
 // Configuration is build-time env — both values are public-by-design client
 // identifiers (architecture v2 §5: no credentials in the bundle; RLS is the
@@ -35,6 +37,9 @@ function stackApp(): StackClientApp<true, string> {
       projectId: projectId!,
       publishableClientKey: publishableClientKey!,
       tokenStore: 'cookie',
+      urls: {
+        oauthCallback: new URL(import.meta.env.BASE_URL, window.location.origin).toString(),
+      },
     })
   }
   return app
