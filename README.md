@@ -18,6 +18,15 @@ unless a `404.html` redirect shim is added. Hash routing avoids the shim entirel
 and an authenticated learner app has no SEO requirement, so the trade-off is free.
 Vite `base` is set to `/academy-web/` to match the project-Pages URL.
 
+## Configuration
+
+Build-time env (public-by-design values only — RLS is the gate; no secrets ever):
+
+- `VITE_DATA_API_URL` — Neon Data API (PostgREST) base URL for the
+  `podzone-training` branch. **Unset = demo mode**: the catalogue and module
+  browser render labelled placeholder fixtures so the deployed shell works
+  without a backend. Real data flows once P1.2 (Neon Auth + Data API) is wired.
+
 ## Develop
 
 ```sh
