@@ -24,10 +24,20 @@ jobs:
           node-version: 22
           cache: npm
       - run: npm ci
+      # Public-by-design client config (Data API URL, Neon Auth project id +
+      # publishable key) from repo Actions variables; unset vars build the
+      # demo-mode shell, so the deploy stays green before they exist.
       - run: npm run build
+        env:
+          VITE_DATA_API_URL: ${{ vars.VITE_DATA_API_URL }}
+          VITE_STACK_PROJECT_ID: ${{ vars.VITE_STACK_PROJECT_ID }}
+          VITE_STACK_PUBLISHABLE_CLIENT_KEY: ${{ vars.VITE_STACK_PUBLISHABLE_CLIENT_KEY }}
       - name: Secrets gate — architecture v2 §5 (no credentials in the public bundle)
         run: |
-          PATTERNS='postgres(ql)?://|neon\.tech|AKIA[0-9A-Z]{16}|-----BEGIN|ghp_[A-Za-z0-9]{36}|gho_[A-Za-z0-9]{36}|github_pat_|\bsk-[A-Za-z0-9_-]{24}|eyJhbGciOi|client_secret|GOCSPX-'
+          # client_secret must only trip on an assigned string literal (a real
+          # leak): the bundled Stack SDK legitimately carries the bare token as
+          # an OAuth parameter name with runtime values.
+          PATTERNS="postgres(ql)?://|neon\.tech|AKIA[0-9A-Z]{16}|-----BEGIN|ghp_[A-Za-z0-9]{36}|gho_[A-Za-z0-9]{36}|github_pat_|\bsk-[A-Za-z0-9_-]{24}|\bssk_|eyJhbGciOi|client_secret[\"']?[[:space:]]*[:=][[:space:]]*[\"'][A-Za-z0-9_-]{8}|GOCSPX-"
           if grep -rInE "$PATTERNS" dist/; then
             echo '::error::Secret-like pattern found in built bundle — §5 violation, refusing to deploy'
             exit 1

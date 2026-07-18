@@ -1,9 +1,59 @@
+import { useEffect, useState } from 'react'
 import { HashRouter, Link, Route, Routes } from 'react-router-dom'
 import { Badge } from '@/components/ui/badge'
+import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { demoMode } from '@/lib/api'
+import {
+  authConfigured,
+  completeOAuthCallback,
+  getCurrentUser,
+  signIn,
+  signOut,
+  type AuthUser,
+} from '@/lib/auth'
 import Catalogue from '@/pages/Catalogue'
 import Curriculum from '@/pages/Curriculum'
+
+function AuthControls() {
+  const [user, setUser] = useState<AuthUser | null>(null)
+  const [ready, setReady] = useState(false)
+
+  useEffect(() => {
+    completeOAuthCallback()
+      .then(getCurrentUser)
+      .then(setUser)
+      .finally(() => setReady(true))
+  }, [])
+
+  if (!authConfigured || !ready) return null
+  if (user) {
+    return (
+      <div className="flex items-center gap-2">
+        <span className="text-sm text-muted-foreground">
+          {user.displayName ?? user.email ?? 'Signed in'}
+        </span>
+        <Button
+          variant="outline"
+          size="sm"
+          onClick={() => signOut().then(() => setUser(null))}
+        >
+          Sign out
+        </Button>
+      </div>
+    )
+  }
+  return (
+    <div className="flex items-center gap-2">
+      <Button variant="outline" size="sm" onClick={() => signIn('google')}>
+        Sign in with Google
+      </Button>
+      <Button variant="outline" size="sm" onClick={() => signIn('github')}>
+        Sign in with GitHub
+      </Button>
+    </div>
+  )
+}
 
 function Shell({ children }: { children: React.ReactNode }) {
   return (
@@ -21,6 +71,7 @@ function Shell({ children }: { children: React.ReactNode }) {
           <div className="flex items-center gap-2">
             {demoMode && <Badge variant="outline">demo data — backend not connected</Badge>}
             <Badge variant="secondary">MVP</Badge>
+            <AuthControls />
           </div>
         </div>
       </header>
@@ -40,7 +91,7 @@ function Home() {
       </CardHeader>
       <CardContent className="text-sm text-muted-foreground">
         Browse the <Link to="/catalogue" className="underline underline-offset-4">catalogue</Link>.
-        Sign-in (Neon Auth) arrives with the P1.2 wiring.
+        Sign in (top right) to see your entitlements and progress under RLS.
       </CardContent>
     </Card>
   )
