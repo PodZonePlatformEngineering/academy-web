@@ -37,7 +37,7 @@ jobs:
           # client_secret must only trip on an assigned string literal (a real
           # leak): the bundled Stack SDK legitimately carries the bare token as
           # an OAuth parameter name with runtime values.
-          PATTERNS="postgres(ql)?://|neon\.tech|AKIA[0-9A-Z]{16}|-----BEGIN|ghp_[A-Za-z0-9]{36}|gho_[A-Za-z0-9]{36}|github_pat_|\bsk-[A-Za-z0-9_-]{24}|\bssk_|eyJhbGciOi|client_secret[\"']?[[:space:]]*[:=][[:space:]]*[\"'][A-Za-z0-9_-]{8}|GOCSPX-"
+          PATTERNS="postgres(ql)?://|ep-[a-z0-9-]+\.[a-z]{2}-[a-z]+-[0-9]+\.aws\.neon\.tech|AKIA[0-9A-Z]{16}|-----BEGIN|ghp_[A-Za-z0-9]{36}|gho_[A-Za-z0-9]{36}|github_pat_|\bsk-[A-Za-z0-9_-]{24}|\bssk_|eyJhbGciOi|client_secret[\"']?[[:space:]]*[:=][[:space:]]*[\"'][A-Za-z0-9_-]{8}|GOCSPX-"
           if grep -rInE "$PATTERNS" dist/; then
             echo '::error::Secret-like pattern found in built bundle — §5 violation, refusing to deploy'
             exit 1
