@@ -13,7 +13,8 @@ import {
   type CatalogueRow,
   type PreambleData,
 } from '@/lib/api'
-import { haveBothKeys } from '@/lib/keys'
+import { loadEmbedder } from '@/lib/embed'
+import { haveTutorKey } from '@/lib/keys'
 import { retrieve } from '@/lib/retrieval'
 import { composeUserTurn, streamTutorReply, type TutorTurn } from '@/lib/tutor'
 import { recordTurn, startTutorSession } from '@/lib/transcripts'
@@ -35,7 +36,26 @@ export default function Tutor() {
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [transcriptNote, setTranscriptNote] = useState<string | null>(null)
+  const [embedNote, setEmbedNote] = useState<string | null>(null)
   const sessionIdRef = useRef<number | null>(null)
+
+  // B-12: course-content search embeds the question in this browser. Kick the
+  // one-time model fetch (~25 MB, then Cache-API cached) off on first tutor
+  // use so it overlaps with the trainee typing their first question.
+  useEffect(() => {
+    let live = true
+    loadEmbedder((p) => {
+      if (!live || p.status === 'done' || !p.file?.endsWith('.onnx')) return
+      const pct = p.progress ? ` ${Math.round(p.progress)}%` : ''
+      setEmbedNote(`Preparing course-content search — one-time model download (~25 MB)…${pct}`)
+    }).then(
+      () => live && setEmbedNote(null),
+      () => live && setEmbedNote('Course-content search model failed to load — retrieval will retry when you ask a question.'),
+    )
+    return () => {
+      live = false
+    }
+  }, [])
 
   useEffect(() => {
     if (curriculum) return
@@ -59,13 +79,13 @@ export default function Tutor() {
   if (!tutorConfigured) {
     return <p className="text-sm text-muted-foreground">The tutor is not configured in this deployment.</p>
   }
-  if (!haveBothKeys()) {
+  if (!haveTutorKey()) {
     return (
       <Card>
         <CardHeader>
           <CardTitle>Tutor</CardTitle>
           <CardDescription>
-            The tutor runs on your own keys. Enter both under{' '}
+            The tutor runs on your own Anthropic key. Enter it under{' '}
             <Link to="/keys" className="underline underline-offset-4">
               Your keys
             </Link>{' '}
@@ -99,8 +119,9 @@ export default function Tutor() {
     const history: TutorTurn[] = turns.map(({ role, text }) => ({ role, text }))
     setTurns((t) => [...t, { role: 'user', text: question }])
     try {
-      // Retrieval first — CC-087 scope; a cross-curriculum refusal surfaces here.
-      const points = await retrieve(curriculum.slug, question)
+      // Retrieval first — in-browser embed, then rag_search under RLS (B-12):
+      // scope is the active curriculum; entitlement yields rows or nothing.
+      const points = await retrieve(curriculum.id, question)
 
       // Transcript session opens lazily on the first exchange (needs the
       // preamble's trainee id; RLS re-checks it server-side).
@@ -161,12 +182,13 @@ export default function Tutor() {
           <Badge variant="secondary">self-attested transcript</Badge>
         </div>
         <p className="text-sm text-muted-foreground">
-          Streams directly from Anthropic on your own key; course material is retrieved with
-          your scoped key. The exchange and token counts are recorded as a self-attested
-          transcript.
+          Streams directly from Anthropic on your own key; course material is matched in
+          this browser and retrieved from your entitled curricula. The exchange and token
+          counts are recorded as a self-attested transcript.
         </p>
       </div>
 
+      {embedNote && <p className="text-sm text-muted-foreground">{embedNote}</p>}
       {transcriptNote && <p className="text-sm text-destructive">{transcriptNote}</p>}
 
       <div className="space-y-3">

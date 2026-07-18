@@ -1,25 +1,29 @@
-// Device-local trainee credentials (architecture v2 §3.2-A/B, D-2/D-4).
+// Device-local trainee credentials (architecture v2 §3.2-A/B, D-2).
 //
-// Two BYO keys power the tutor: the trainee's own Anthropic API key (their
-// key, their device, their spend — never transmitted to platform services,
-// never in Neon) and their issued per-trainee Qdrant Database API key
-// (read-only, scoped to the -content collections of entitled curricula; the
-// key IS the retrieval entitlement, enforced by Qdrant server-side).
+// One BYO key powers the tutor since B-12: the trainee's own Anthropic API
+// key (their key, their device, their spend — never transmitted to platform
+// services, never in Neon). Course-content retrieval needs no trainee key any
+// more — it rides the signed-in session under RLS (rag_search).
 //
-// Both live in browser localStorage only. Clearing them here is the complete
-// removal — no platform copy exists. Validation is a live probe with the key
-// itself: a minimal countable Messages call for Anthropic, a scoped
-// server-side-inference query for Qdrant.
+// The key lives in browser localStorage only. Clearing it here is the
+// complete removal — no platform copy exists. Validation is a live probe
+// with the key itself: a minimal countable Messages call.
 
 import Anthropic from '@anthropic-ai/sdk'
-import { EMBED_MODEL, QDRANT_URL, TUTOR_MODEL } from '@/lib/tutorConfig'
+import { TUTOR_MODEL } from '@/lib/tutorConfig'
 
 const ANTHROPIC_KEY = 'academy.anthropic_key'
-const QDRANT_KEY = 'academy.qdrant_key'
 
-export type KeyKind = 'anthropic' | 'qdrant'
+// B-12 sweep: the retired trainee Qdrant key must not linger on devices that
+// stored one under T-040 — it is dead (D-4 is no longer a trainee concern).
+// (Guarded: offline tests import this module outside a browser.)
+if (typeof localStorage !== 'undefined') {
+  localStorage.removeItem('academy.qdrant_key')
+}
 
-const storageKey = (kind: KeyKind) => (kind === 'anthropic' ? ANTHROPIC_KEY : QDRANT_KEY)
+export type KeyKind = 'anthropic'
+
+const storageKey = (_kind: KeyKind) => ANTHROPIC_KEY
 
 export function getKey(kind: KeyKind): string | null {
   return localStorage.getItem(storageKey(kind))
@@ -33,8 +37,8 @@ export function clearKey(kind: KeyKind): void {
   localStorage.removeItem(storageKey(kind))
 }
 
-export function haveBothKeys(): boolean {
-  return Boolean(getKey('anthropic') && getKey('qdrant'))
+export function haveTutorKey(): boolean {
+  return Boolean(getKey('anthropic'))
 }
 
 /** Mask for display: first 7 + last 4 chars, never the middle. */
@@ -81,41 +85,5 @@ export async function validateAnthropicKey(key: string): Promise<ValidationResul
       return { ok: false, detail: `Anthropic API error ${e.status ?? ''}: ${e.message}` }
     }
     return { ok: false, detail: `Could not reach the Anthropic API: ${String(e)}` }
-  }
-}
-
-/**
- * Validate a trainee Qdrant key with a scoped probe: the same server-side
- * inference query the tutor runs, limit 1, against an entitled -content
- * collection. A 401/403 means the key is bad or not scoped to that
- * collection — which is exactly the D-4 entitlement boundary doing its job.
- */
-export async function validateQdrantKey(
-  key: string,
-  entitledCollection: string,
-): Promise<ValidationResult> {
-  if (!QDRANT_URL) return { ok: false, detail: 'Retrieval endpoint not configured (VITE_QDRANT_URL).' }
-  try {
-    const res = await fetch(`${QDRANT_URL}/collections/${entitledCollection}/points/query`, {
-      method: 'POST',
-      headers: { 'api-key': key, 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        query: { text: 'validation probe', model: EMBED_MODEL },
-        limit: 1,
-        with_payload: false,
-      }),
-    })
-    if (res.ok) {
-      return { ok: true, detail: `Key OK — scoped query against ${entitledCollection} succeeded.` }
-    }
-    if (res.status === 401 || res.status === 403) {
-      return {
-        ok: false,
-        detail: `Qdrant refused the key for ${entitledCollection} (HTTP ${res.status}) — wrong key, revoked, or not scoped to this curriculum.`,
-      }
-    }
-    return { ok: false, detail: `Qdrant returned HTTP ${res.status} probing ${entitledCollection}.` }
-  } catch (e) {
-    return { ok: false, detail: `Could not reach the retrieval endpoint: ${String(e)}` }
   }
 }
