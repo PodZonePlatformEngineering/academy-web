@@ -56,6 +56,26 @@ async function get<T>(pathAndQuery: string): Promise<T> {
   return res.json() as Promise<T>
 }
 
+// PostgREST write / RPC. Inserts return the created row(s) via
+// Prefer: return=representation; /rpc/ functions return their result directly.
+export async function post<T>(path: string, body: unknown): Promise<T> {
+  const token = await getAccessToken()
+  const res = await fetch(`${DATA_API_URL}${path}`, {
+    method: 'POST',
+    headers: {
+      Accept: 'application/json',
+      'Content-Type': 'application/json',
+      Prefer: 'return=representation',
+      ...(token ? { Authorization: `Bearer ${token}` } : {}),
+    },
+    body: JSON.stringify(body),
+  })
+  if (!res.ok) {
+    throw new Error(`Data API ${res.status} on ${path}`)
+  }
+  return res.json() as Promise<T>
+}
+
 // --- Demo fixtures (shape-identical to the 011 views; placeholder copy) ----
 
 const demoCatalogue: CatalogueRow[] = [
@@ -110,6 +130,28 @@ export async function fetchCatalogue(): Promise<CatalogueRow[]> {
 export async function fetchModules(curriculumId: number): Promise<ModuleRow[]> {
   if (demoMode) return demoModules.filter((m) => m.curriculum_id === curriculumId)
   return get<ModuleRow[]>(`/module_browser?curriculum_id=eq.${curriculumId}&order=ordinal`)
+}
+
+// --- Tutor preamble (U-6 RPC, migration 015) -------------------------------
+
+export interface PreambleData {
+  trainee: { id: number; display_name: string; email: string | null }
+  active_curriculum: {
+    id: number
+    slug: string
+    title: string
+    description: string | null
+    entitled: boolean
+  } | null
+  enrolments: unknown[]
+  progress: unknown[]
+  generated_at: string
+}
+
+/** Assembled student-context preamble under RLS; null when anchorless/demo. */
+export async function fetchTutorPreamble(curriculumId: number): Promise<PreambleData | null> {
+  if (demoMode) return null
+  return post<PreambleData | null>('/rpc/tutor_preamble', { p_curriculum_id: curriculumId })
 }
 
 export async function fetchContent(

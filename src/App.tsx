@@ -16,6 +16,7 @@ import { tutorConfigured } from '@/lib/tutorConfig'
 import Catalogue from '@/pages/Catalogue'
 import Curriculum from '@/pages/Curriculum'
 import Keys from '@/pages/Keys'
+import Tutor from '@/pages/Tutor'
 
 function AuthControls() {
   const [user, setUser] = useState<AuthUser | null>(null)
@@ -125,6 +126,7 @@ export default function App() {
           <Route path="/" element={<Home />} />
           <Route path="/catalogue" element={<Catalogue />} />
           <Route path="/curriculum/:slug" element={<Curriculum />} />
+          <Route path="/curriculum/:slug/tutor" element={<Tutor />} />
           <Route path="/keys" element={<Keys />} />
           <Route path="*" element={<NotFound />} />
         </Routes>

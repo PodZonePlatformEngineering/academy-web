@@ -17,6 +17,7 @@ import {
   type ContentRow,
   type ModuleRow,
 } from '@/lib/api'
+import { tutorConfigured } from '@/lib/tutorConfig'
 
 function Section({ row }: { row: ContentRow }) {
   return (
@@ -108,7 +109,16 @@ export default function Curriculum() {
         <Link to="/catalogue" className="text-sm underline underline-offset-4">
           ← Catalogue
         </Link>
-        <h1 className="mt-2 text-xl font-semibold">{curriculum.title}</h1>
+        <div className="mt-2 flex items-center justify-between gap-2">
+          <h1 className="text-xl font-semibold">{curriculum.title}</h1>
+          {tutorConfigured && curriculum.access && (
+            <Button asChild variant="outline" size="sm">
+              <Link to={`/curriculum/${curriculum.slug}/tutor`} state={{ curriculum }}>
+                Ask the tutor
+              </Link>
+            </Button>
+          )}
+        </div>
         <p className="text-sm text-muted-foreground">{curriculum.description}</p>
       </div>
       {!modules && <p className="text-sm text-muted-foreground">Loading modules…</p>}
