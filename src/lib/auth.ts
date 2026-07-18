@@ -38,7 +38,10 @@ function stackApp(): StackClientApp<true, string> {
       publishableClientKey: publishableClientKey!,
       tokenStore: 'cookie',
       urls: {
-        oauthCallback: new URL(import.meta.env.BASE_URL, window.location.origin).toString(),
+        // Must be RELATIVE — the SDK asserts it (HexclaveAssertionError otherwise,
+        // which silently kills every sign-in click). BASE_URL is /academy-web/ on
+        // Pages, / in dev; the SDK resolves it against the current origin.
+        oauthCallback: import.meta.env.BASE_URL,
       },
     })
   }
