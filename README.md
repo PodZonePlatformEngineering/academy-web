@@ -20,12 +20,30 @@ Vite `base` is set to `/academy-web/` to match the project-Pages URL.
 
 ## Configuration
 
-Build-time env (public-by-design values only — RLS is the gate; no secrets ever):
+Build-time env (public-by-design values only — RLS is the gate; no secrets ever).
+In CI these come from repo **Actions variables** (Settings → Secrets and variables →
+Actions → Variables) of the same names; locally use a `.env.local`:
 
 - `VITE_DATA_API_URL` — Neon Data API (PostgREST) base URL for the
   `podzone-training` branch. **Unset = demo mode**: the catalogue and module
   browser render labelled placeholder fixtures so the deployed shell works
-  without a backend. Real data flows once P1.2 (Neon Auth + Data API) is wired.
+  without a backend.
+- `VITE_STACK_PROJECT_ID` — Neon Auth project id (a UUID; also visible in the
+  project's public JWKS URL).
+- `VITE_STACK_PUBLISHABLE_CLIENT_KEY` — Neon Auth publishable client key
+  (`pck_…`, designed to ship in the browser bundle). **Either unset = auth UI
+  hidden** and all reads are anonymous.
+
+## Auth (Neon Auth / Stack)
+
+Sign-in uses `@stackframe/js` headlessly (`src/lib/auth.ts`) rather than the
+provider/handler component route: the app is hash-routed on a Pages subpath, and
+the headless flow keeps the OAuth return (`?code=…` lands in the query, before
+the fragment, invisible to HashRouter) independent of routing. Google + GitHub
+run on Neon Auth's **shared dev OAuth keys** for the MVP; production OAuth apps
+are an operator step tracked in PROJ-011. The session JWT is attached to every
+Data API request (`src/lib/api.ts`) and RLS on `trainee.neon_auth_user_id` does
+the rest.
 
 ## Develop
 

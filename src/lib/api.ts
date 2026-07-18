@@ -36,15 +36,11 @@ export interface ContentRow {
   body: string
 }
 
+import { getAccessToken } from '@/lib/auth'
+
 const DATA_API_URL: string | undefined = import.meta.env.VITE_DATA_API_URL
 
 export const demoMode = !DATA_API_URL
-
-// Single seam for Neon Auth (Stack) — replaced with the real session token
-// accessor when P1.2 lands. Null = anonymous (RLS yields public rows only).
-async function getAccessToken(): Promise<string | null> {
-  return null
-}
 
 async function get<T>(pathAndQuery: string): Promise<T> {
   const token = await getAccessToken()
