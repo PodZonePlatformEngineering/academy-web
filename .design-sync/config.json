@@ -26,7 +26,9 @@
     "Tutor": null
   },
   "extraFonts": [
-    "node_modules/@fontsource-variable/inter/index.css"
+    "node_modules/@fontsource-variable/bricolage-grotesque/opsz.css",
+    "node_modules/@fontsource-variable/plus-jakarta-sans/index.css",
+    "node_modules/@fontsource-variable/jetbrains-mono/index.css"
   ],
   "dtsPropsFor": {
     "Button": "variant?: 'default' | 'outline' | 'secondary' | 'ghost' | 'destructive' | 'link'; size?: 'default' | 'sm' | 'lg' | 'icon' | 'icon-sm' | 'icon-lg'; asChild?: boolean; disabled?: boolean; children?: React.ReactNode; className?: string",
