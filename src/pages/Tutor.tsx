@@ -1,27 +1,62 @@
 // Tutor chat panel (T-040 Task 2/3): scoped retrieval → streamed browser-direct
-// Claude → transcript rows, per turn. UI is deliberately minimal (MVP);
-// the streaming + scoping + transcript spine is the product.
+// Claude → transcript rows, per turn. B6 (T-045) dressed the stream in the
+// telegram kit's conversation language — bubbles, in-stream retrieval chips,
+// composer, outline rail — over the unchanged streaming + transcript spine.
 
-import { useEffect, useRef, useState } from 'react'
+import { Fragment, useEffect, useRef, useState } from 'react'
 import { Link, useLocation, useParams } from 'react-router-dom'
 import { Badge } from '@/components/ui/badge'
-import { Button } from '@/components/ui/button'
 import { Card, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
+import { ChatBubble } from '@/components/ui/chat-bubble'
+import { ChatComposer } from '@/components/ui/chat-composer'
+import { LessonCard } from '@/components/ui/lesson-card'
+import { LessonOutlinePanel } from '@/components/ui/lesson-outline-panel'
 import {
   fetchCatalogue,
+  fetchEnrolmentId,
+  fetchModules,
+  fetchProgress,
+  fetchSections,
   fetchTutorPreamble,
   type CatalogueRow,
+  type ModuleRow,
   type PreambleData,
+  type ProgressRow,
+  type SectionRow,
 } from '@/lib/api'
 import { loadEmbedder } from '@/lib/embed'
+import { moduleOutline, outlineProgressPct } from '@/lib/gamification'
 import { haveTutorKey } from '@/lib/keys'
-import { retrieve } from '@/lib/retrieval'
+import { retrieve, type RetrievedPoint } from '@/lib/retrieval'
 import { composeUserTurn, streamTutorReply, type TutorTurn } from '@/lib/tutor'
 import { recordTurn, startTutorSession } from '@/lib/transcripts'
 import { TUTOR_MODEL, tutorConfigured } from '@/lib/tutorConfig'
 
 interface ChatTurn extends TutorTurn {
   meta?: string
+  at?: string
+  sources?: RetrievedPoint[]
+}
+
+const timeNow = () =>
+  new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+
+// The passages a reply is grounded in, as in-stream lesson chips (kit's
+// lesson-card treatment adapted to the retrieval-context surface).
+function SourceChips({ points }: { points: RetrievedPoint[] }) {
+  return (
+    <div className="flex max-w-[78%] flex-wrap gap-1.5 self-start">
+      {points.map((p, i) => (
+        <LessonCard
+          key={i}
+          variant="chip"
+          eyebrow={[p.module_id, p.section_id].filter(Boolean).join('/') || undefined}
+          title={p.title ?? p.type ?? 'course passage'}
+          meta={`${Math.round(p.score * 100)}%`}
+        />
+      ))}
+    </div>
+  )
 }
 
 export default function Tutor() {
@@ -32,12 +67,17 @@ export default function Tutor() {
   const [preambleReady, setPreambleReady] = useState(false)
   const [turns, setTurns] = useState<ChatTurn[]>([])
   const [streaming, setStreaming] = useState<string | null>(null)
+  const [pendingSources, setPendingSources] = useState<RetrievedPoint[] | null>(null)
   const [draft, setDraft] = useState('')
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [transcriptNote, setTranscriptNote] = useState<string | null>(null)
   const [embedNote, setEmbedNote] = useState<string | null>(null)
+  const [modules, setModules] = useState<ModuleRow[]>([])
+  const [sections, setSections] = useState<SectionRow[]>([])
+  const [progress, setProgress] = useState<ProgressRow[]>([])
   const sessionIdRef = useRef<number | null>(null)
+  const endRef = useRef<HTMLDivElement>(null)
 
   // B-12: course-content search embeds the question in this browser. Kick the
   // one-time model fetch (~25 MB, then Cache-API cached) off on first tutor
@@ -75,6 +115,27 @@ export default function Tutor() {
       (e: Error) => setError(`Could not load your student context: ${e.message}`),
     )
   }, [curriculum])
+
+  // Outline rail (T-045): existing read paths only, each best-effort — the
+  // chat works with an empty rail.
+  useEffect(() => {
+    if (!curriculum) return
+    fetchModules(curriculum.id).then(setModules, () => setModules([]))
+    fetchSections(curriculum.id).then(setSections, () => setSections([]))
+    fetchEnrolmentId(curriculum.id).then(
+      (id) =>
+        id === null
+          ? setProgress([])
+          : fetchProgress(id).then(setProgress, () => setProgress([])),
+      () => setProgress([]),
+    )
+  }, [curriculum])
+
+  // Follow the conversation as exchanges land (not per streaming delta — the
+  // reader may be scrolled up mid-answer).
+  useEffect(() => {
+    if (turns.length > 0) endRef.current?.scrollIntoView({ behavior: 'smooth', block: 'nearest' })
+  }, [turns])
 
   if (!tutorConfigured) {
     return <p className="text-sm text-muted-foreground">The tutor is not configured in this deployment.</p>
@@ -117,11 +178,12 @@ export default function Tutor() {
     setError(null)
     setDraft('')
     const history: TutorTurn[] = turns.map(({ role, text }) => ({ role, text }))
-    setTurns((t) => [...t, { role: 'user', text: question }])
+    setTurns((t) => [...t, { role: 'user', text: question, at: timeNow() }])
     try {
       // Retrieval first — in-browser embed, then rag_search under RLS (B-12):
       // scope is the active curriculum; entitlement yields rows or nothing.
       const points = await retrieve(curriculum.id, question)
+      setPendingSources(points)
 
       // Transcript session opens lazily on the first exchange (needs the
       // preamble's trainee id; RLS re-checks it server-side).
@@ -148,11 +210,14 @@ export default function Tutor() {
         (delta) => setStreaming((s) => (s ?? '') + delta),
       )
       setStreaming(null)
+      setPendingSources(null)
       setTurns((t) => [
         ...t,
         {
           role: 'assistant',
           text: reply.text,
+          at: timeNow(),
+          sources: points,
           meta: `${reply.model} · ${points.length} passage${points.length === 1 ? '' : 's'} retrieved · ${reply.inputTokens} in / ${reply.outputTokens} out tokens (your spend)`,
         },
       ])
@@ -163,11 +228,14 @@ export default function Tutor() {
       }
     } catch (e) {
       setStreaming(null)
+      setPendingSources(null)
       setError(e instanceof Error ? e.message : String(e))
     } finally {
       setBusy(false)
     }
   }
+
+  const outline = moduleOutline(modules, sections, progress)
 
   return (
     <div className="space-y-4">
@@ -188,56 +256,73 @@ export default function Tutor() {
         </p>
       </div>
 
-      {embedNote && <p className="text-sm text-muted-foreground">{embedNote}</p>}
-      {transcriptNote && <p className="text-sm text-destructive">{transcriptNote}</p>}
-
-      {/* Design chat-bubbles: trainee speaks clay from the right, the tutor
-          answers on white from the left; the straightened corner points at
-          the speaker. */}
-      <div className="flex flex-col gap-2">
-        {turns.map((t, i) =>
-          t.role === 'user' ? (
-            <div
-              key={i}
-              className="max-w-[78%] self-end rounded-[var(--r-lg)_var(--r-lg)_4px_var(--r-lg)] bg-primary px-3.5 py-2.5 text-primary-foreground"
-            >
-              <pre className="font-sans text-sm whitespace-pre-wrap">{t.text}</pre>
-            </div>
-          ) : (
-            <div
-              key={i}
-              className="max-w-[78%] self-start rounded-[var(--r-lg)_var(--r-lg)_var(--r-lg)_4px] border bg-white px-3.5 py-2.5"
-            >
-              <pre className="font-sans text-sm whitespace-pre-wrap">{t.text}</pre>
-              {t.meta && <p className="mt-2 text-xs text-muted-foreground">{t.meta}</p>}
-            </div>
-          ),
-        )}
-        {streaming !== null && (
-          <div className="max-w-[78%] self-start rounded-[var(--r-lg)_var(--r-lg)_var(--r-lg)_4px] border bg-white px-3.5 py-2.5">
-            <pre className="font-sans text-sm whitespace-pre-wrap">{streaming || '…'}</pre>
+      <div className="lg:grid lg:grid-cols-[minmax(0,1fr)_300px] lg:items-start lg:gap-4">
+        <div className="space-y-4">
+          <div className="flex flex-col gap-2.5">
+            {turns.length === 0 && streaming === null && (
+              <ChatBubble role="system">
+                Ask anything about {curriculum.title} — answers are grounded in your course material.
+              </ChatBubble>
+            )}
+            {embedNote && <ChatBubble role="system">{embedNote}</ChatBubble>}
+            {turns.map((t, i) =>
+              t.role === 'user' ? (
+                <ChatBubble key={i} role="user" timestamp={t.at}>
+                  {t.text}
+                </ChatBubble>
+              ) : (
+                <Fragment key={i}>
+                  {t.sources && t.sources.length > 0 && <SourceChips points={t.sources} />}
+                  <ChatBubble role="tutor" timestamp={[t.at, t.meta].filter(Boolean).join(' · ')}>
+                    {t.text}
+                  </ChatBubble>
+                </Fragment>
+              ),
+            )}
+            {streaming !== null && (
+              <>
+                {pendingSources && pendingSources.length > 0 && (
+                  <SourceChips points={pendingSources} />
+                )}
+                <ChatBubble role="tutor" streaming>
+                  {streaming}
+                </ChatBubble>
+              </>
+            )}
+            <div ref={endRef} />
           </div>
-        )}
-      </div>
 
-      {error && <p className="text-sm text-destructive">{error}</p>}
+          {transcriptNote && <p className="text-sm text-destructive">{transcriptNote}</p>}
+          {error && <p className="text-sm text-destructive">{error}</p>}
 
-      <div className="flex items-start gap-2">
-        <textarea
-          className="min-h-20 w-full rounded-lg border bg-white p-3 text-sm shadow-(--shadow-inset) transition-colors outline-none placeholder:text-muted-foreground focus:border-primary focus:ring-3 focus:ring-primary/15"
-          placeholder={`Ask about ${curriculum.title}…`}
-          value={draft}
-          onChange={(e) => setDraft(e.target.value)}
-          onKeyDown={(e) => {
-            if (e.key === 'Enter' && !e.shiftKey) {
-              e.preventDefault()
-              void send()
-            }
-          }}
+          <ChatComposer
+            value={draft}
+            onValueChange={setDraft}
+            onSend={() => void send()}
+            busy={busy}
+            disabled={!preambleReady}
+            placeholder={`Ask about ${curriculum.title}…`}
+            hint="Enter to send · Shift+Enter for a new line"
+          />
+        </div>
+
+        <LessonOutlinePanel
+          className="hidden lg:sticky lg:top-6 lg:flex"
+          title={curriculum.title}
+          subtitle={
+            modules.length > 0
+              ? `${modules.length} module${modules.length === 1 ? '' : 's'}`
+              : undefined
+          }
+          progressPct={outlineProgressPct(outline)}
+          items={outline.map((m) => ({
+            id: m.id,
+            label: m.label,
+            state: m.state,
+            meta: m.total > 0 ? `${m.done}/${m.total}` : undefined,
+          }))}
+          footer={<Badge variant="secondary">self-attested</Badge>}
         />
-        <Button onClick={() => void send()} disabled={busy || !draft.trim() || !preambleReady}>
-          {busy ? 'Thinking…' : 'Send'}
-        </Button>
       </div>
     </div>
   )
