@@ -13,6 +13,7 @@ import {
   type AuthUser,
 } from '@/lib/auth'
 import { tutorConfigured } from '@/lib/tutorConfig'
+import GamificationPanel from '@/components/GamificationPanel'
 import Catalogue from '@/pages/Catalogue'
 import Curriculum from '@/pages/Curriculum'
 import Keys from '@/pages/Keys'
@@ -90,18 +91,21 @@ function Shell({ children }: { children: React.ReactNode }) {
 
 function Home() {
   return (
-    <Card>
-      <CardHeader>
-        <CardTitle>PodZone Academy</CardTitle>
-        <CardDescription>
-          Curriculum-based training with an AI tutor — progress-first MVP.
-        </CardDescription>
-      </CardHeader>
-      <CardContent className="text-sm text-muted-foreground">
-        Browse the <Link to="/catalogue" className="underline underline-offset-4">catalogue</Link>.
-        Sign in (top right) to see your entitlements and progress under RLS.
-      </CardContent>
-    </Card>
+    <div className="space-y-4">
+      <Card>
+        <CardHeader>
+          <CardTitle>PodZone Academy</CardTitle>
+          <CardDescription>
+            Curriculum-based training with an AI tutor — progress-first MVP.
+          </CardDescription>
+        </CardHeader>
+        <CardContent className="text-sm text-muted-foreground">
+          Browse the <Link to="/catalogue" className="underline underline-offset-4">catalogue</Link>.
+          Sign in (top right) to see your entitlements and progress under RLS.
+        </CardContent>
+      </Card>
+      <GamificationPanel />
+    </div>
   )
 }
 
