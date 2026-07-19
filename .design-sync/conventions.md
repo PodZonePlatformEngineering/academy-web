@@ -33,6 +33,13 @@ NOT resolve. For your own layout glue:
   (earned = `achievedAt` set; locked = `achievedAt: null`; in-progress = `progress`
   0–1), `GamificationStrip` (compact XP/streak/level summary — pass `summary`, see its
   docs for the shape).
+- **Conversation (tutor kit)**: `ChatBubble` (`role`: `user` clay-right / `tutor`
+  honey-left / `system` centred ping; `streaming` caret; `timestamp` slot under the
+  bubble — bubbles need a `flex` column parent for alignment), `LessonCard` (full
+  `card` form + compact `chip` form for in-stream retrieval citations),
+  `ChatComposer` (controlled: `value`/`onValueChange`/`onSend`; `busy` spins the send
+  affordance, `disabled` blocks sending), `LessonOutlinePanel` (module outline +
+  progress rail — pass `items`, see its docs).
 - Progress and gamification numbers are **self-attested** in this product — pair them
   with a `<Badge variant="secondary">self-attested</Badge>` where the app does.
 

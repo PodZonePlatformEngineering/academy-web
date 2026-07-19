@@ -6,7 +6,7 @@
   "buildCmd": "npm run build",
   "srcDir": "src/components",
   "tsconfig": "tsconfig.app.json",
-  "cssEntry": "dist/assets/index-BYG5Q6Xa.css",
+  "cssEntry": "dist/assets/index-BKmg412m.css",
   "componentSrcMap": {
     "Badge": "src/components/ui/badge.tsx",
     "Button": "src/components/ui/button.tsx",
@@ -18,6 +18,10 @@
     "AchievementBadge": "src/components/ui/achievement-badge.tsx",
     "AchievementGrid": "src/components/ui/achievement-grid.tsx",
     "GamificationStrip": "src/components/GamificationStrip.tsx",
+    "ChatBubble": "src/components/ui/chat-bubble.tsx",
+    "LessonCard": "src/components/ui/lesson-card.tsx",
+    "ChatComposer": "src/components/ui/chat-composer.tsx",
+    "LessonOutlinePanel": "src/components/ui/lesson-outline-panel.tsx",
     "GamificationPanel": null,
     "App": null,
     "Catalogue": null,
@@ -40,7 +44,11 @@
     "StreakCard": "streak: Array<{ periodStart: string; periodEnd: string; usedFreeze?: boolean }>; currentStreak: number; longestStreak: number; total: number; title?: string; actionLabel?: string; onActionClick?: () => void; showHowItWorks?: boolean; howItWorksTitle?: string; howItWorksItems?: string[]; className?: string",
     "AchievementBadge": "achievement: { id: string; name: string; trigger: 'metric' | 'api' | 'streak'; badgeUrl?: string | null; progress?: number; rarity?: number; achievedAt: string | null }; badgeSize?: 'sm' | 'default' | 'lg' | 'xl'; onAchievementClick?: (achievement: { id: string; name: string; trigger: 'metric' | 'api' | 'streak'; badgeUrl?: string | null; progress?: number; rarity?: number; achievedAt: string | null }) => void; className?: string",
     "AchievementGrid": "achievements: Array<{ id: string; name: string; trigger: 'metric' | 'api' | 'streak'; badgeUrl?: string | null; progress?: number; rarity?: number; achievedAt: string | null }>; columns?: 2 | 3 | 4 | 'auto'; gap?: 'sm' | 'default' | 'lg'; badgeSize?: 'sm' | 'default' | 'lg'; onAchievementClick?: (achievement: { id: string; name: string; trigger: 'metric' | 'api' | 'streak'; badgeUrl?: string | null; progress?: number; rarity?: number; achievedAt: string | null }) => void; className?: string",
-    "GamificationStrip": "summary: { learner: { id: number; display_name: string | null; timezone: string }; total_xp: number; level: { level: number; name: string; xp_threshold: number } | null; next_level: { level: number; name: string; xp_threshold: number } | null; streak: { learner_id: number; current_len: number; longest_len: number; last_active_date: string | null } | null; awards: Array<{ code: string; awarded_at: string; title: string; icon: string | null }> } | null"
+    "GamificationStrip": "summary: { learner: { id: number; display_name: string | null; timezone: string }; total_xp: number; level: { level: number; name: string; xp_threshold: number } | null; next_level: { level: number; name: string; xp_threshold: number } | null; streak: { learner_id: number; current_len: number; longest_len: number; last_active_date: string | null } | null; awards: Array<{ code: string; awarded_at: string; title: string; icon: string | null }> } | null",
+    "ChatBubble": "role?: 'user' | 'tutor' | 'system'; streaming?: boolean; timestamp?: React.ReactNode; children?: React.ReactNode; className?: string",
+    "LessonCard": "variant?: 'card' | 'chip'; eyebrow?: string; title: string; meta?: string; actionLabel?: string; onAction?: () => void; className?: string",
+    "ChatComposer": "value: string; onValueChange: (value: string) => void; onSend: () => void; disabled?: boolean; busy?: boolean; placeholder?: string; hint?: React.ReactNode; className?: string",
+    "LessonOutlinePanel": "eyebrow?: string; title: string; subtitle?: string; progressPct?: number; progressLabel?: string; items: Array<{ id: string | number; label: string; state?: 'not_started' | 'in_progress' | 'complete'; meta?: string }>; itemsLabel?: string; footer?: React.ReactNode; className?: string"
   },
   "overrides": {
     "PointsBadge": {

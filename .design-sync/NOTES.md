@@ -15,9 +15,10 @@
   references BASE_URL-absolute hashed font paths that don't resolve from the bundle.
 - `GamificationStrip` had a default-only export; a named export was added to the
   source 2026-07-19 (`export *` in the synth entry misses defaults).
-- `dtsPropsFor` is hand-maintained for all 10 components (no `.d.ts` tree in an app
+- `dtsPropsFor` is hand-maintained for all 14 components (no `.d.ts` tree in an app
   repo; auto-extraction yields `[key: string]: unknown` stubs). Update it when a
-  component's props change.
+  component's props change. The four conversation components (T-045: ChatBubble,
+  LessonCard, ChatComposer, LessonOutlinePanel) follow the same named-export shape.
 - Week views (StreakCalendar `view="week"`, StreakCard's strip) anchor to the CURRENT
   week — time-dependent, not deterministically previewable. Previews pin `view="month"`
   `month={July 2026}` instead.
