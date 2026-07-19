@@ -1,16 +1,18 @@
 import { HashRouter, Link, Navigate, Route, Routes, useLocation } from 'react-router-dom'
+import AppNav from '@/components/AppNav'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Card, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
+import { recordCurriculumUsed } from '@/lib/activeCurriculum'
 import { demoMode } from '@/lib/api'
 import { authConfigured, signIn, signOut } from '@/lib/auth'
 import { AuthStateProvider, useAuthState } from '@/lib/auth-state'
 import { routeDecision } from '@/lib/routing'
-import { tutorConfigured } from '@/lib/tutorConfig'
 import Catalogue from '@/pages/Catalogue'
 import Curriculum from '@/pages/Curriculum'
-import Keys from '@/pages/Keys'
+import Home from '@/pages/Home'
 import Landing from '@/pages/Landing'
+import Scoreboard from '@/pages/Scoreboard'
 import Tutor from '@/pages/Tutor'
 
 function AuthControls() {
@@ -45,24 +47,18 @@ function AuthControls() {
   )
 }
 
+// Shell v2 (B8): header keeps the brand lockup, the demo/MVP badges, and
+// sign-out; the old header text links become the persistent icon nav —
+// AppNav as a left rail on desktop and a bottom bar on mobile (the extra
+// bottom padding keeps the bar off the page's tail).
 function Shell({ children }: { children: React.ReactNode }) {
   return (
     <div className="min-h-screen bg-background text-foreground">
       <header className="border-b">
-        <div className="mx-auto flex max-w-4xl items-center justify-between px-4 py-3">
-          <div className="flex items-center gap-6">
-            <Link to="/" className="font-heading text-lg font-semibold">
-              PodZone Academy
-            </Link>
-            <Link to="/catalogue" className="text-sm text-muted-foreground hover:text-foreground">
-              Catalogue
-            </Link>
-            {tutorConfigured && (
-              <Link to="/keys" className="text-sm text-muted-foreground hover:text-foreground">
-                Your keys
-              </Link>
-            )}
-          </div>
+        <div className="mx-auto flex max-w-5xl items-center justify-between px-4 py-3">
+          <Link to="/" className="font-heading text-lg font-semibold">
+            PodZone Academy
+          </Link>
           <div className="flex items-center gap-2">
             {demoMode && <Badge variant="outline">demo data — backend not connected</Badge>}
             <Badge variant="secondary">MVP</Badge>
@@ -70,7 +66,11 @@ function Shell({ children }: { children: React.ReactNode }) {
           </div>
         </div>
       </header>
-      <main className="mx-auto max-w-4xl px-4 py-8">{children}</main>
+      <div className="mx-auto flex max-w-5xl items-start gap-2 px-4">
+        <AppNav variant="rail" />
+        <main className="min-w-0 flex-1 py-8 pb-24 md:pb-8">{children}</main>
+      </div>
+      <AppNav variant="bar" />
     </div>
   )
 }
@@ -88,14 +88,21 @@ function NotFound() {
   )
 }
 
-// The B7 front-door rule, applied once above the route table — the decision
-// itself is pure and lives (with its tests) in lib/routing.ts.
+// The front-door rule (B7, extended by B8), applied once above the route
+// table — the decision itself is pure and lives (with its tests) in
+// lib/routing.ts.
 function RouteGate({ children }: { children: React.ReactNode }) {
   const { visitor } = useAuthState()
   const { pathname } = useLocation()
   const decision = routeDecision(pathname, visitor)
   if (decision.action === 'hold') return null
-  if (decision.action === 'redirect') return <Navigate to={decision.to} replace />
+  if (decision.action === 'redirect') {
+    // The legacy tutor deep link carries its curriculum — record it as
+    // last-used before landing on /tutor so the redirect opens the same
+    // curriculum. Idempotent, so StrictMode's double render is harmless.
+    if (decision.recordCurriculum) recordCurriculumUsed(decision.recordCurriculum)
+    return <Navigate to={decision.to} replace />
+  }
   return <>{children}</>
 }
 
@@ -104,26 +111,12 @@ export default function App() {
     <AuthStateProvider>
       <HashRouter>
         <RouteGate>
+          {/* Legacy paths (/catalogue, /curriculum/:slug[/tutor], /keys) have
+              no Route entries — RouteGate rewrites them before matching. */}
           <Routes>
             <Route path="/" element={<Landing />} />
             <Route
-              path="/catalogue"
-              element={
-                <Shell>
-                  <Catalogue />
-                </Shell>
-              }
-            />
-            <Route
-              path="/curriculum/:slug"
-              element={
-                <Shell>
-                  <Curriculum />
-                </Shell>
-              }
-            />
-            <Route
-              path="/curriculum/:slug/tutor"
+              path="/tutor"
               element={
                 <Shell>
                   <Tutor />
@@ -131,10 +124,34 @@ export default function App() {
               }
             />
             <Route
-              path="/keys"
+              path="/library"
               element={
                 <Shell>
-                  <Keys />
+                  <Catalogue />
+                </Shell>
+              }
+            />
+            <Route
+              path="/library/:slug"
+              element={
+                <Shell>
+                  <Curriculum />
+                </Shell>
+              }
+            />
+            <Route
+              path="/scoreboard"
+              element={
+                <Shell>
+                  <Scoreboard />
+                </Shell>
+              }
+            />
+            <Route
+              path="/home"
+              element={
+                <Shell>
+                  <Home />
                 </Shell>
               }
             />

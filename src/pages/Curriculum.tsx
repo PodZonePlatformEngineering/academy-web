@@ -26,6 +26,7 @@ import {
   type ProgressRow,
   type SectionRow,
 } from '@/lib/api'
+import { recordCurriculumUsed } from '@/lib/activeCurriculum'
 import { moduleComplete, sectionsByModule, stateForPoint } from '@/lib/gamification'
 import { tutorConfigured } from '@/lib/tutorConfig'
 
@@ -181,6 +182,9 @@ export default function Curriculum() {
 
   useEffect(() => {
     if (!curriculum) return
+    // B8: a library visit marks this curriculum as last-used, so /tutor opens
+    // on it (the seam ignores the record if access has lapsed).
+    recordCurriculumUsed(curriculum.slug)
     fetchModules(curriculum.id).then(setModules, (e: Error) => setError(e.message))
     if (curriculum.access) {
       // Entitled read of the markable units + own engine state; each is
@@ -218,16 +222,16 @@ export default function Curriculum() {
   return (
     <div className="space-y-4">
       <div>
-        <Link to="/catalogue" className="text-sm underline underline-offset-4">
-          ← Catalogue
+        <Link to="/library" className="text-sm underline underline-offset-4">
+          ← Library
         </Link>
         <div className="mt-2 flex items-center justify-between gap-2">
           <h1 className="text-2xl font-semibold">{curriculum.title}</h1>
           {tutorConfigured && curriculum.access && (
             <Button asChild variant="outline" size="sm">
-              <Link to={`/curriculum/${curriculum.slug}/tutor`} state={{ curriculum }}>
-                Ask the tutor
-              </Link>
+              {/* This page's visit already recorded the curriculum as
+                  last-used, so the top-level tutor opens on it. */}
+              <Link to="/tutor">Ask the tutor</Link>
             </Button>
           )}
         </div>

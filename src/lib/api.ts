@@ -288,6 +288,20 @@ export async function fetchSections(curriculumId: number): Promise<SectionRow[]>
   )
 }
 
+export interface EnrolmentRow {
+  id: number
+  curriculum_id: number
+  enrolled_at: string
+}
+
+/** All of the caller's active enrolments (RLS: own rows only). */
+export async function fetchEnrolments(): Promise<EnrolmentRow[]> {
+  if (demoMode) return []
+  return get<EnrolmentRow[]>(
+    '/enrolment?status=eq.active&select=id,curriculum_id,enrolled_at&order=enrolled_at.desc',
+  )
+}
+
 /** The caller's active enrolment for a curriculum (RLS: own rows only). */
 export async function fetchEnrolmentId(curriculumId: number): Promise<number | null> {
   if (demoMode) return null

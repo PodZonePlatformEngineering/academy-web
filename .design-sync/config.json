@@ -6,7 +6,7 @@
   "buildCmd": "npm run build",
   "srcDir": "src/components",
   "tsconfig": "tsconfig.app.json",
-  "cssEntry": "dist/assets/index-ifZTQmC9.css",
+  "cssEntry": "dist/assets/index-C58vdQQI.css",
   "componentSrcMap": {
     "Badge": "src/components/ui/badge.tsx",
     "Button": "src/components/ui/button.tsx",
@@ -23,10 +23,13 @@
     "ChatComposer": "src/components/ui/chat-composer.tsx",
     "LessonOutlinePanel": "src/components/ui/lesson-outline-panel.tsx",
     "GamificationPanel": null,
+    "AppNav": null,
+    "KeyVault": null,
     "App": null,
     "Catalogue": null,
     "Curriculum": null,
-    "Keys": null,
+    "Home": null,
+    "Scoreboard": null,
     "Tutor": null
   },
   "extraFonts": [

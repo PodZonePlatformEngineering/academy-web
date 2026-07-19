@@ -27,6 +27,8 @@ export const authConfigured = Boolean(projectId && publishableClientKey)
 export interface AuthUser {
   displayName: string | null
   email: string | null
+  /** Provider profile image (B8: the Home nav icon); null when none. */
+  profileImageUrl: string | null
 }
 
 let app: StackClientApp<true, string> | null = null
@@ -73,7 +75,11 @@ export async function getCurrentUser(): Promise<AuthUser | null> {
   if (!authConfigured) return null
   const user = await stackApp().getUser()
   if (!user) return null
-  return { displayName: user.displayName, email: user.primaryEmail }
+  return {
+    displayName: user.displayName,
+    email: user.primaryEmail,
+    profileImageUrl: user.profileImageUrl,
+  }
 }
 
 /** The Neon Auth session JWT for the Data API, or null when signed out. */
