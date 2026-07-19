@@ -1,0 +1,59 @@
+/* =========================================================================
+   Quest Academy — junior-school white-label demo theme (T-044 Task 2, §9.2).
+   The whole file is the white-label contract in action: it overrides ONLY
+   brand vars from src/index.css (palette ramps, fonts, radii, shadows) and
+   ships its own self-hosted fonts. No semantic var, component, or page knows
+   this theme exists — the derivation in index.css re-themes everything.
+   ========================================================================= */
+
+@import "@fontsource-variable/fredoka";
+@import "@fontsource-variable/nunito";
+
+:root {
+    /* Royal blue replaces clay as the action ramp */
+    --clay-50:  #E9F4FF;
+    --clay-100: #C6E1FB;
+    --clay-300: #6FB5F0;
+    --clay-500: #2563EB;   /* primary action */
+    --clay-600: #1D4FCC;   /* hover */
+    --clay-700: #163FA8;   /* pressed */
+
+    /* Sunshine ember */
+    --ember-300: #FFD27A;
+    --ember-500: #F5A524;
+    --ember-600: #D88611;
+
+    --honey-200: #FFF1B8;
+    --honey-300: #FFE074;
+    --honey-500: #F2C037;
+
+    /* Inks become rich navy instead of warm brown */
+    --ink-900: #0F1E3D;
+    --ink-700: #1F3262;
+    --ink-600: #4A5A86;
+    --ink-400: #8B9BC0;
+    --ink-200: #D2DCEE;
+
+    /* Surfaces become soft sky-cream */
+    --cream-50:  #F4F9FF;
+    --cream-100: #E8F1FE;
+    --cream-200: #D2DEF3;
+    --cream-300: #B6C5E4;
+
+    --sage-500: #16A34A;
+    --sage-100: #D6F0DD;
+    --rust-600: #DC2626;
+    --rust-100: #FAD7D7;
+
+    --font-display: 'Fredoka Variable', 'Bricolage Grotesque Variable', ui-rounded, sans-serif;
+    --font-body:    'Nunito Variable', 'Plus Jakarta Sans Variable', ui-rounded, system-ui, sans-serif;
+
+    /* Rounder everything */
+    --r-sm: 10px;
+    --r-md: 18px;
+    --r-lg: 24px;
+    --r-xl: 32px;
+
+    --shadow-soft: 0 2px 4px rgba(15,30,61,.06), 0 12px 28px -10px rgba(15,30,61,.18);
+    --shadow-pop:  0 4px 8px rgba(15,30,61,.10), 0 20px 48px -14px rgba(15,30,61,.24);
+}

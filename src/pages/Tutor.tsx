@@ -176,7 +176,7 @@ export default function Tutor() {
           ← {curriculum.title}
         </Link>
         <div className="mt-2 flex items-center gap-2">
-          <h1 className="text-xl font-semibold">Tutor</h1>
+          <h1 className="text-2xl font-semibold">Tutor</h1>
           <Badge variant="outline">scoped to {curriculum.slug}</Badge>
           {/* D-3 trust labelling: client-written transcript, not verified. */}
           <Badge variant="secondary">self-attested transcript</Badge>
@@ -191,20 +191,31 @@ export default function Tutor() {
       {embedNote && <p className="text-sm text-muted-foreground">{embedNote}</p>}
       {transcriptNote && <p className="text-sm text-destructive">{transcriptNote}</p>}
 
-      <div className="space-y-3">
-        {turns.map((t, i) => (
-          <div key={i} className={`rounded-md border p-3 ${t.role === 'user' ? 'bg-muted/30' : ''}`}>
-            <p className="mb-1 text-xs font-medium text-muted-foreground">
-              {t.role === 'user' ? 'You' : 'Tutor'}
-            </p>
-            <pre className="whitespace-pre-wrap font-sans text-sm">{t.text}</pre>
-            {t.meta && <p className="mt-2 text-xs text-muted-foreground">{t.meta}</p>}
-          </div>
-        ))}
+      {/* Design chat-bubbles: trainee speaks clay from the right, the tutor
+          answers on white from the left; the straightened corner points at
+          the speaker. */}
+      <div className="flex flex-col gap-2">
+        {turns.map((t, i) =>
+          t.role === 'user' ? (
+            <div
+              key={i}
+              className="max-w-[78%] self-end rounded-[var(--r-lg)_var(--r-lg)_4px_var(--r-lg)] bg-primary px-3.5 py-2.5 text-primary-foreground"
+            >
+              <pre className="font-sans text-sm whitespace-pre-wrap">{t.text}</pre>
+            </div>
+          ) : (
+            <div
+              key={i}
+              className="max-w-[78%] self-start rounded-[var(--r-lg)_var(--r-lg)_var(--r-lg)_4px] border bg-white px-3.5 py-2.5"
+            >
+              <pre className="font-sans text-sm whitespace-pre-wrap">{t.text}</pre>
+              {t.meta && <p className="mt-2 text-xs text-muted-foreground">{t.meta}</p>}
+            </div>
+          ),
+        )}
         {streaming !== null && (
-          <div className="rounded-md border p-3">
-            <p className="mb-1 text-xs font-medium text-muted-foreground">Tutor</p>
-            <pre className="whitespace-pre-wrap font-sans text-sm">{streaming || '…'}</pre>
+          <div className="max-w-[78%] self-start rounded-[var(--r-lg)_var(--r-lg)_var(--r-lg)_4px] border bg-white px-3.5 py-2.5">
+            <pre className="font-sans text-sm whitespace-pre-wrap">{streaming || '…'}</pre>
           </div>
         )}
       </div>
@@ -213,7 +224,7 @@ export default function Tutor() {
 
       <div className="flex items-start gap-2">
         <textarea
-          className="min-h-20 w-full rounded-md border bg-background p-3 text-sm"
+          className="min-h-20 w-full rounded-lg border bg-white p-3 text-sm shadow-(--shadow-inset) transition-colors outline-none placeholder:text-muted-foreground focus:border-primary focus:ring-3 focus:ring-primary/15"
           placeholder={`Ask about ${curriculum.title}…`}
           value={draft}
           onChange={(e) => setDraft(e.target.value)}
