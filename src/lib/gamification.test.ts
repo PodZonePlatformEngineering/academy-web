@@ -3,12 +3,15 @@ import type {
   AchievementRow,
   ActivityDayRow,
   GamificationSummary,
+  ModuleRow,
   ProgressRow,
   SectionRow,
 } from '@/lib/api'
 import {
   levelProgressPct,
   moduleComplete,
+  moduleOutline,
+  outlineProgressPct,
   sectionsByModule,
   stateForPoint,
   toStreakPeriods,
@@ -134,5 +137,68 @@ describe('sectionsByModule / stateForPoint / moduleComplete', () => {
     ]
     expect(moduleComplete(progress, 7)).toBe(true)
     expect(moduleComplete(progress, 6)).toBe(false)
+  })
+})
+
+describe('moduleOutline / outlineProgressPct', () => {
+  const mod = (id: number, code: string | null, title: string, count = 2): ModuleRow => ({
+    id,
+    curriculum_id: 5,
+    code,
+    slug: title.toLowerCase().replace(/\s/g, '-'),
+    title,
+    ordinal: id,
+    section_count: count,
+  })
+  const sec = (module: string, section: string, anchor: string): SectionRow => ({
+    curriculum_id: 5,
+    module_code: module,
+    kind: 'section',
+    section_id: section,
+    anchor_point_id: anchor,
+    title: `${module}/${section}`,
+    point_count: 3,
+  })
+  const row = (id: number, moduleId: number, state: ProgressRow['state'], point: string | null): ProgressRow => ({
+    id,
+    enrolment_id: 5,
+    module_id: moduleId,
+    state,
+    point_id: point,
+  })
+
+  const modules = [mod(6, 'M1', 'Foundations'), mod(7, 'M2', 'Context'), mod(8, 'M3', 'Agents')]
+  const sections = [sec('M1', '01', 'p1'), sec('M1', '02', 'p2'), sec('M2', '01', 'p3')]
+
+  it('derives one row per module with done counts and states', () => {
+    const progress = [row(1, 6, 'complete', 'p1'), row(2, 6, 'in_progress', 'p2')]
+    expect(moduleOutline(modules, sections, progress)).toEqual([
+      { id: 6, label: 'Foundations', state: 'in_progress', done: 1, total: 2 },
+      { id: 7, label: 'Context', state: 'not_started', done: 0, total: 1 },
+      { id: 8, label: 'Agents', state: 'not_started', done: 0, total: 2 },
+    ])
+  })
+
+  it('completes a module when all its sections are marked or the rollup exists', () => {
+    const progress = [
+      row(1, 6, 'complete', 'p1'),
+      row(2, 6, 'complete', 'p2'),
+      row(3, 7, 'complete', null), // rollup without visible section marks
+    ]
+    const states = moduleOutline(modules, sections, progress).map((i) => i.state)
+    expect(states).toEqual(['complete', 'complete', 'not_started'])
+  })
+
+  it('falls back to section_count for modules with no visible sections', () => {
+    const items = moduleOutline(modules, sections, [])
+    expect(items.find((i) => i.id === 8)?.total).toBe(2)
+  })
+
+  it('sums section completion into a percentage, undefined when unmarkable', () => {
+    const progress = [row(1, 6, 'complete', 'p1')]
+    // 1 done of 2 + 1 + 2 markable
+    expect(outlineProgressPct(moduleOutline(modules, sections, progress))).toBe(20)
+    expect(outlineProgressPct([])).toBeUndefined()
+    expect(outlineProgressPct(moduleOutline([mod(9, null, 'Empty', 0)], [], []))).toBeUndefined()
   })
 })

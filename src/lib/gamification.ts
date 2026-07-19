@@ -7,6 +7,7 @@ import type {
   ActivityDayRow,
   AwardRow,
   GamificationSummary,
+  ModuleRow,
   ProgressRow,
   SectionRow,
 } from '@/lib/api'
@@ -105,4 +106,48 @@ export function moduleComplete(progress: ProgressRow[], moduleId: number): boole
   return progress.some(
     (p) => p.module_id === moduleId && p.point_id === null && p.state === 'complete',
   )
+}
+
+// --- Outline rail (T-045) — modules + own progress → LessonOutlinePanel rows.
+
+export interface ModuleOutlineItem {
+  id: number
+  label: string
+  state: ProgressRow['state']
+  /** Sections marked complete in this module (self-attested). */
+  done: number
+  /** Markable sections visible to the caller (falls back to section_count). */
+  total: number
+}
+
+/** One outline row per module, states read from the RLS-gated progress rows. */
+export function moduleOutline(
+  modules: ModuleRow[],
+  sections: SectionRow[],
+  progress: ProgressRow[],
+): ModuleOutlineItem[] {
+  const grouped = sectionsByModule(sections)
+  return modules.map((m) => {
+    const secs = (m.code && grouped.get(m.code)) || []
+    const states = secs.map((s) => stateForPoint(progress, s.anchor_point_id))
+    const done = states.filter((s) => s === 'complete').length
+    const complete =
+      moduleComplete(progress, m.id) || (secs.length > 0 && done === secs.length)
+    const started = done > 0 || states.includes('in_progress')
+    return {
+      id: m.id,
+      label: m.title,
+      state: complete ? 'complete' : started ? 'in_progress' : 'not_started',
+      done,
+      total: secs.length > 0 ? secs.length : m.section_count,
+    }
+  })
+}
+
+/** Sections-complete percentage across the outline; undefined when unmarkable. */
+export function outlineProgressPct(items: ModuleOutlineItem[]): number | undefined {
+  const total = items.reduce((n, i) => n + i.total, 0)
+  if (total === 0) return undefined
+  const done = items.reduce((n, i) => n + i.done, 0)
+  return Math.round((done / total) * 100)
 }
