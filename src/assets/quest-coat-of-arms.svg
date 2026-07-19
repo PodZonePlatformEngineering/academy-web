@@ -1,0 +1,43 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 240" width="200" height="240">
+  <defs>
+    <linearGradient id="shield" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#2563EB"></stop>
+      <stop offset="1" stop-color="#1D4FCC"></stop>
+    </linearGradient>
+    <linearGradient id="gold" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#FBBF24"></stop>
+      <stop offset="1" stop-color="#F2C037"></stop>
+    </linearGradient>
+  </defs>
+
+  
+  <path d="M 100 14&#xA;           L 178 32&#xA;           L 178 110&#xA;           Q 178 170 100 220&#xA;           Q 22 170 22 110&#xA;           L 22 32 Z" fill="url(#shield)" stroke="#0F1E3D" stroke-width="4"></path>
+
+  
+  <path d="M 22 110 L 100 60 L 178 110 L 178 130 L 100 80 L 22 130 Z" fill="url(#gold)" stroke="#0F1E3D" stroke-width="2.5"></path>
+
+  
+  <g transform="translate(100 42)">
+    <rect x="-26" y="-2" width="52" height="22" rx="2" fill="#F4F9FF" stroke="#0F1E3D" stroke-width="2"></rect>
+    <line x1="0" y1="0" x2="0" y2="20" stroke="#0F1E3D" stroke-width="2"></line>
+    <line x1="-20" y1="6" x2="-6" y2="6" stroke="#0F1E3D" stroke-width="1.2"></line>
+    <line x1="-20" y1="11" x2="-6" y2="11" stroke="#0F1E3D" stroke-width="1.2"></line>
+    <line x1="6" y1="6" x2="20" y2="6" stroke="#0F1E3D" stroke-width="1.2"></line>
+    <line x1="6" y1="11" x2="20" y2="11" stroke="#0F1E3D" stroke-width="1.2"></line>
+  </g>
+
+  
+  <g fill="#FBBF24" stroke="#0F1E3D" stroke-width="1.5">
+    <polygon points="60,156 64,166 75,167 67,174 70,184 60,179 50,184 53,174 45,167 56,166"></polygon>
+    <polygon points="100,168 104,178 115,179 107,186 110,196 100,191 90,196 93,186 85,179 96,178"></polygon>
+    <polygon points="140,156 144,166 155,167 147,174 150,184 140,179 130,184 133,174 125,167 136,166"></polygon>
+  </g>
+
+  
+  <g transform="translate(0 198)">
+    <path d="M 22 8 L 36 0 L 36 28 L 22 22 Z" fill="#A8442F"></path>
+    <path d="M 178 8 L 164 0 L 164 28 L 178 22 Z" fill="#A8442F"></path>
+    <rect x="30" y="4" width="140" height="22" rx="2" fill="#C8553D" stroke="#0F1E3D" stroke-width="2"></rect>
+    <text x="100" y="20" font-family="Fredoka, sans-serif" font-size="11" font-weight="700" fill="#fff" text-anchor="middle" letter-spacing="2">VENTURE · WONDER · BUILD</text>
+  </g>
+</svg>

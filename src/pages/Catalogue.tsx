@@ -9,6 +9,7 @@ import {
   CardTitle,
 } from '@/components/ui/card'
 import { fetchCatalogue, type CatalogueRow } from '@/lib/api'
+import GamificationPanel from '@/components/GamificationPanel'
 
 export default function Catalogue() {
   const [rows, setRows] = useState<CatalogueRow[] | null>(null)
@@ -22,29 +23,35 @@ export default function Catalogue() {
   if (!rows) return <p className="text-sm text-muted-foreground">Loading catalogue…</p>
 
   return (
-    <div className="grid gap-4 sm:grid-cols-2">
-      {rows.map((c) => (
-        <Card key={c.id}>
-          <CardHeader>
-            <div className="flex items-center justify-between gap-2">
-              <CardTitle>{c.title}</CardTitle>
-              <Badge variant={c.access ? 'default' : 'outline'}>
-                {c.access ? 'enrolled' : c.tier === 'free' ? 'free' : 'locked'}
-              </Badge>
-            </div>
-            <CardDescription>{c.description ?? '—'}</CardDescription>
-          </CardHeader>
-          <CardContent className="text-sm">
-            <Link
-              to={`/curriculum/${c.slug}`}
-              state={{ curriculum: c }}
-              className="underline underline-offset-4"
-            >
-              Browse modules
-            </Link>
-          </CardContent>
-        </Card>
-      ))}
+    <div className="space-y-4">
+      {/* The catalogue is the signed-in home since B7 ("/" redirects here), so
+          the trophy panel from the old home lives at its head. It renders null
+          when signed out, leaving anonymous browsing untouched. */}
+      <GamificationPanel />
+      <div className="grid gap-4 sm:grid-cols-2">
+        {rows.map((c) => (
+          <Card key={c.id}>
+            <CardHeader>
+              <div className="flex items-center justify-between gap-2">
+                <CardTitle>{c.title}</CardTitle>
+                <Badge variant={c.access ? 'default' : 'outline'}>
+                  {c.access ? 'enrolled' : c.tier === 'free' ? 'free' : 'locked'}
+                </Badge>
+              </div>
+              <CardDescription>{c.description ?? '—'}</CardDescription>
+            </CardHeader>
+            <CardContent className="text-sm">
+              <Link
+                to={`/curriculum/${c.slug}`}
+                state={{ curriculum: c }}
+                className="underline underline-offset-4"
+              >
+                Browse modules
+              </Link>
+            </CardContent>
+          </Card>
+        ))}
+      </div>
     </div>
   )
 }

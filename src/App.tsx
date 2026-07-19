@@ -1,34 +1,20 @@
-import { useEffect, useState } from 'react'
-import { HashRouter, Link, Route, Routes } from 'react-router-dom'
+import { HashRouter, Link, Navigate, Route, Routes, useLocation } from 'react-router-dom'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
+import { Card, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { demoMode } from '@/lib/api'
-import {
-  authConfigured,
-  completeOAuthCallback,
-  getCurrentUser,
-  signIn,
-  signOut,
-  type AuthUser,
-} from '@/lib/auth'
+import { authConfigured, signIn, signOut } from '@/lib/auth'
+import { AuthStateProvider, useAuthState } from '@/lib/auth-state'
+import { routeDecision } from '@/lib/routing'
 import { tutorConfigured } from '@/lib/tutorConfig'
-import GamificationPanel from '@/components/GamificationPanel'
 import Catalogue from '@/pages/Catalogue'
 import Curriculum from '@/pages/Curriculum'
 import Keys from '@/pages/Keys'
+import Landing from '@/pages/Landing'
 import Tutor from '@/pages/Tutor'
 
 function AuthControls() {
-  const [user, setUser] = useState<AuthUser | null>(null)
-  const [ready, setReady] = useState(false)
-
-  useEffect(() => {
-    completeOAuthCallback()
-      .then(getCurrentUser)
-      .then(setUser)
-      .finally(() => setReady(true))
-  }, [])
+  const { user, ready, setUser } = useAuthState()
 
   if (!authConfigured || !ready) return null
   if (user) {
@@ -89,26 +75,6 @@ function Shell({ children }: { children: React.ReactNode }) {
   )
 }
 
-function Home() {
-  return (
-    <div className="space-y-4">
-      <Card>
-        <CardHeader>
-          <CardTitle>PodZone Academy</CardTitle>
-          <CardDescription>
-            Curriculum-based training with an AI tutor — progress-first MVP.
-          </CardDescription>
-        </CardHeader>
-        <CardContent className="text-sm text-muted-foreground">
-          Browse the <Link to="/catalogue" className="underline underline-offset-4">catalogue</Link>.
-          Sign in (top right) to see your entitlements and progress under RLS.
-        </CardContent>
-      </Card>
-      <GamificationPanel />
-    </div>
-  )
-}
-
 function NotFound() {
   return (
     <Card>
@@ -122,19 +88,67 @@ function NotFound() {
   )
 }
 
+// The B7 front-door rule, applied once above the route table — the decision
+// itself is pure and lives (with its tests) in lib/routing.ts.
+function RouteGate({ children }: { children: React.ReactNode }) {
+  const { visitor } = useAuthState()
+  const { pathname } = useLocation()
+  const decision = routeDecision(pathname, visitor)
+  if (decision.action === 'hold') return null
+  if (decision.action === 'redirect') return <Navigate to={decision.to} replace />
+  return <>{children}</>
+}
+
 export default function App() {
   return (
-    <HashRouter>
-      <Shell>
-        <Routes>
-          <Route path="/" element={<Home />} />
-          <Route path="/catalogue" element={<Catalogue />} />
-          <Route path="/curriculum/:slug" element={<Curriculum />} />
-          <Route path="/curriculum/:slug/tutor" element={<Tutor />} />
-          <Route path="/keys" element={<Keys />} />
-          <Route path="*" element={<NotFound />} />
-        </Routes>
-      </Shell>
-    </HashRouter>
+    <AuthStateProvider>
+      <HashRouter>
+        <RouteGate>
+          <Routes>
+            <Route path="/" element={<Landing />} />
+            <Route
+              path="/catalogue"
+              element={
+                <Shell>
+                  <Catalogue />
+                </Shell>
+              }
+            />
+            <Route
+              path="/curriculum/:slug"
+              element={
+                <Shell>
+                  <Curriculum />
+                </Shell>
+              }
+            />
+            <Route
+              path="/curriculum/:slug/tutor"
+              element={
+                <Shell>
+                  <Tutor />
+                </Shell>
+              }
+            />
+            <Route
+              path="/keys"
+              element={
+                <Shell>
+                  <Keys />
+                </Shell>
+              }
+            />
+            <Route
+              path="*"
+              element={
+                <Shell>
+                  <NotFound />
+                </Shell>
+              }
+            />
+          </Routes>
+        </RouteGate>
+      </HashRouter>
+    </AuthStateProvider>
   )
 }
