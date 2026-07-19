@@ -1,6 +1,8 @@
 // Device-local credentials panel (T-040 Task 1, architecture v2 §3.2-B).
 // Entry, live validation, clear/replace for the trainee's BYO Anthropic key —
 // the only trainee key since B-12 (retrieval rides the session under RLS).
+// B8 moved this panel from the retired /keys page into Home's Config section;
+// behaviour is unchanged.
 
 import { useState } from 'react'
 import { Badge } from '@/components/ui/badge'
@@ -104,12 +106,12 @@ function KeyPanel({ kind, title, custody, placeholder, validate }: KeyPanelProps
   )
 }
 
-export default function Keys() {
+export default function KeyVault() {
   if (!tutorConfigured) {
     return (
       <Card>
         <CardHeader>
-          <CardTitle>Tutor keys</CardTitle>
+          <CardTitle className="text-base">Tutor key</CardTitle>
           <CardDescription>
             The tutor is not configured in this deployment (backend or auth missing) — key
             entry is disabled.
@@ -120,16 +122,13 @@ export default function Keys() {
   }
 
   return (
-    <div className="space-y-4">
-      <div>
-        <h1 className="text-2xl font-semibold">Your keys</h1>
-        <p className="text-sm text-muted-foreground">
-          Your key, your device, your spend. The key is stored only in this browser — it is
-          never sent to the academy platform and never stored in our database. Clearing it
-          here removes it completely. Course-content retrieval needs no key: it runs on
-          your signed-in session and covers exactly the curricula you are entitled to.
-        </p>
-      </div>
+    <div className="space-y-3">
+      <p className="text-sm text-muted-foreground">
+        Your key, your device, your spend. The key is stored only in this browser — it is
+        never sent to the academy platform and never stored in our database. Clearing it
+        here removes it completely. Course-content retrieval needs no key: it runs on
+        your signed-in session and covers exactly the curricula you are entitled to.
+      </p>
       <KeyPanel
         kind="anthropic"
         title="Anthropic API key"

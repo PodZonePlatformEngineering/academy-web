@@ -9,7 +9,6 @@ import {
   CardTitle,
 } from '@/components/ui/card'
 import { fetchCatalogue, type CatalogueRow } from '@/lib/api'
-import GamificationPanel from '@/components/GamificationPanel'
 
 export default function Catalogue() {
   const [rows, setRows] = useState<CatalogueRow[] | null>(null)
@@ -24,10 +23,8 @@ export default function Catalogue() {
 
   return (
     <div className="space-y-4">
-      {/* The catalogue is the signed-in home since B7 ("/" redirects here), so
-          the trophy panel from the old home lives at its head. It renders null
-          when signed out, leaving anonymous browsing untouched. */}
-      <GamificationPanel />
+      {/* B8: the trophy panel that headed this page while it was the signed-in
+          home now lives on /scoreboard — this page is the library, for anyone. */}
       <div className="grid gap-4 sm:grid-cols-2">
         {rows.map((c) => (
           <Card key={c.id}>
@@ -42,7 +39,7 @@ export default function Catalogue() {
             </CardHeader>
             <CardContent className="text-sm">
               <Link
-                to={`/curriculum/${c.slug}`}
+                to={`/library/${c.slug}`}
                 state={{ curriculum: c }}
                 className="underline underline-offset-4"
               >

@@ -2,9 +2,12 @@
 // Claude → transcript rows, per turn. B6 (T-045) dressed the stream in the
 // telegram kit's conversation language — bubbles, in-stream retrieval chips,
 // composer, outline rail — over the unchanged streaming + transcript spine.
+// B8 (T-047) moved the mount to top-level /tutor: the curriculum is resolved
+// through the activeCurriculum seam instead of a route param; everything
+// below the resolution is unchanged (B9 owns panes/persistence).
 
 import { Fragment, useEffect, useRef, useState } from 'react'
-import { Link, useLocation, useParams } from 'react-router-dom'
+import { Link, Navigate } from 'react-router-dom'
 import { Badge } from '@/components/ui/badge'
 import { Card, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { ChatBubble } from '@/components/ui/chat-bubble'
@@ -12,7 +15,13 @@ import { ChatComposer } from '@/components/ui/chat-composer'
 import { LessonCard } from '@/components/ui/lesson-card'
 import { LessonOutlinePanel } from '@/components/ui/lesson-outline-panel'
 import {
+  lastUsedCurriculum,
+  recordCurriculumUsed,
+  resolveActiveCurriculum,
+} from '@/lib/activeCurriculum'
+import {
   fetchCatalogue,
+  fetchEnrolments,
   fetchEnrolmentId,
   fetchModules,
   fetchProgress,
@@ -60,9 +69,8 @@ function SourceChips({ points }: { points: RetrievedPoint[] }) {
 }
 
 export default function Tutor() {
-  const { slug } = useParams()
-  const seeded = (useLocation().state as { curriculum?: CatalogueRow } | null)?.curriculum
-  const [curriculum, setCurriculum] = useState<CatalogueRow | null>(seeded ?? null)
+  const [curriculum, setCurriculum] = useState<CatalogueRow | null>(null)
+  const [noEnrolment, setNoEnrolment] = useState(false)
   const [preamble, setPreamble] = useState<PreambleData | null>(null)
   const [preambleReady, setPreambleReady] = useState(false)
   const [turns, setTurns] = useState<ChatTurn[]>([])
@@ -97,13 +105,24 @@ export default function Tutor() {
     }
   }, [])
 
+  // B8: which curriculum this tutor is about comes from the seam — device-
+  // local last-used, else the single/newest active enrolment. The answer is
+  // recorded back as last-used (tutor open counts); nothing resolvable sends
+  // the visitor to the library to enrol first.
   useEffect(() => {
-    if (curriculum) return
-    fetchCatalogue().then(
-      (rows) => setCurriculum(rows.find((c) => c.slug === slug) ?? null),
+    Promise.all([fetchCatalogue(), fetchEnrolments()]).then(
+      ([catalogue, enrolments]) => {
+        const resolved = resolveActiveCurriculum(lastUsedCurriculum(), catalogue, enrolments)
+        if (!resolved) {
+          setNoEnrolment(true)
+          return
+        }
+        recordCurriculumUsed(resolved.slug)
+        setCurriculum(resolved)
+      },
       (e: Error) => setError(e.message),
     )
-  }, [curriculum, slug])
+  }, [])
 
   useEffect(() => {
     if (!curriculum) return
@@ -147,14 +166,18 @@ export default function Tutor() {
           <CardTitle>Tutor</CardTitle>
           <CardDescription>
             The tutor runs on your own Anthropic key. Enter it under{' '}
-            <Link to="/keys" className="underline underline-offset-4">
-              Your keys
+            <Link to="/home" className="underline underline-offset-4">
+              Home → Config
             </Link>{' '}
             first.
           </CardDescription>
         </CardHeader>
       </Card>
     )
+  }
+  if (noEnrolment) {
+    // Nothing to tutor about yet — the library is where enrolments start.
+    return <Navigate to="/library" replace />
   }
   if (!curriculum) {
     return error ? (
@@ -240,7 +263,7 @@ export default function Tutor() {
   return (
     <div className="space-y-4">
       <div>
-        <Link to={`/curriculum/${curriculum.slug}`} className="text-sm underline underline-offset-4">
+        <Link to={`/library/${curriculum.slug}`} className="text-sm underline underline-offset-4">
           ← {curriculum.title}
         </Link>
         <div className="mt-2 flex items-center gap-2">
