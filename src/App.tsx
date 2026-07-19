@@ -1,4 +1,5 @@
 import { HashRouter, Link, Navigate, Route, Routes, useLocation } from 'react-router-dom'
+import AppNav from '@/components/AppNav'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Card, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
@@ -7,7 +8,6 @@ import { demoMode } from '@/lib/api'
 import { authConfigured, signIn, signOut } from '@/lib/auth'
 import { AuthStateProvider, useAuthState } from '@/lib/auth-state'
 import { routeDecision } from '@/lib/routing'
-import { tutorConfigured } from '@/lib/tutorConfig'
 import Catalogue from '@/pages/Catalogue'
 import Curriculum from '@/pages/Curriculum'
 import Home from '@/pages/Home'
@@ -47,24 +47,18 @@ function AuthControls() {
   )
 }
 
+// Shell v2 (B8): header keeps the brand lockup, the demo/MVP badges, and
+// sign-out; the old header text links become the persistent icon nav —
+// AppNav as a left rail on desktop and a bottom bar on mobile (the extra
+// bottom padding keeps the bar off the page's tail).
 function Shell({ children }: { children: React.ReactNode }) {
   return (
     <div className="min-h-screen bg-background text-foreground">
       <header className="border-b">
-        <div className="mx-auto flex max-w-4xl items-center justify-between px-4 py-3">
-          <div className="flex items-center gap-6">
-            <Link to="/" className="font-heading text-lg font-semibold">
-              PodZone Academy
-            </Link>
-            <Link to="/library" className="text-sm text-muted-foreground hover:text-foreground">
-              Library
-            </Link>
-            {tutorConfigured && (
-              <Link to="/home" className="text-sm text-muted-foreground hover:text-foreground">
-                Home
-              </Link>
-            )}
-          </div>
+        <div className="mx-auto flex max-w-5xl items-center justify-between px-4 py-3">
+          <Link to="/" className="font-heading text-lg font-semibold">
+            PodZone Academy
+          </Link>
           <div className="flex items-center gap-2">
             {demoMode && <Badge variant="outline">demo data — backend not connected</Badge>}
             <Badge variant="secondary">MVP</Badge>
@@ -72,7 +66,11 @@ function Shell({ children }: { children: React.ReactNode }) {
           </div>
         </div>
       </header>
-      <main className="mx-auto max-w-4xl px-4 py-8">{children}</main>
+      <div className="mx-auto flex max-w-5xl items-start gap-2 px-4">
+        <AppNav variant="rail" />
+        <main className="min-w-0 flex-1 py-8 pb-24 md:pb-8">{children}</main>
+      </div>
+      <AppNav variant="bar" />
     </div>
   )
 }
