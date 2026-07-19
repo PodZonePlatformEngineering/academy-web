@@ -38,16 +38,20 @@ function OwlIcon({ className }: { className?: string }) {
   )
 }
 
-// Home's icon is the signed-in user themself: the Neon Auth profile image
-// when the provider supplies one, else initials in a circle.
-function Avatar({ user }: { user: AuthUser }) {
+// The signed-in user themself: the Neon Auth profile image when the provider
+// supplies one, else initials in a circle. Doubles as the Home nav icon (sm)
+// and the Home page's profile portrait (lg).
+export function Avatar({ user, size = 'sm' }: { user: AuthUser; size?: 'sm' | 'lg' }) {
   if (user.profileImageUrl) {
     return (
       <img
         src={user.profileImageUrl}
         alt=""
         referrerPolicy="no-referrer"
-        className="size-6 rounded-full border object-cover"
+        className={cn(
+          'rounded-full border object-cover',
+          size === 'sm' ? 'size-6' : 'size-14',
+        )}
       />
     )
   }
@@ -59,7 +63,12 @@ function Avatar({ user }: { user: AuthUser }) {
       .map((w) => w[0]!.toUpperCase())
       .join('') || '?'
   return (
-    <span className="flex size-6 items-center justify-center rounded-full bg-primary/15 text-[0.6rem] font-bold text-primary">
+    <span
+      className={cn(
+        'flex items-center justify-center rounded-full bg-primary/15 font-bold text-primary',
+        size === 'sm' ? 'size-6 text-[0.6rem]' : 'size-14 text-lg',
+      )}
+    >
       {initials}
     </span>
   )
