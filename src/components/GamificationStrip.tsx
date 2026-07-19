@@ -8,7 +8,7 @@ import { StreakBadge } from '@/components/ui/streak-badge'
 import { levelProgressPct } from '@/lib/gamification'
 import type { GamificationSummary } from '@/lib/api'
 
-export default function GamificationStrip({ summary }: { summary: GamificationSummary | null }) {
+function GamificationStrip({ summary }: { summary: GamificationSummary | null }) {
   if (!summary) return null
   return (
     <div className="flex flex-wrap items-center gap-3 rounded-md border bg-muted/30 px-3 py-2">
@@ -31,3 +31,8 @@ export default function GamificationStrip({ summary }: { summary: GamificationSu
     </div>
   )
 }
+
+// Named export alongside the default — the codebase convention everywhere else,
+// and required for consumers that re-export via `export *` (design-sync bundle).
+export { GamificationStrip }
+export default GamificationStrip
