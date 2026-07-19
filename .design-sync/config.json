@@ -1,0 +1,55 @@
+{
+  "projectId": "859da23a-e79b-411d-950b-78b14f1907e7",
+  "shape": "package",
+  "pkg": "academy-web",
+  "globalName": "AcademyWeb",
+  "buildCmd": "npm run build",
+  "srcDir": "src/components",
+  "tsconfig": "tsconfig.app.json",
+  "cssEntry": "dist/assets/index-Ds-EZxF6.css",
+  "componentSrcMap": {
+    "Badge": "src/components/ui/badge.tsx",
+    "Button": "src/components/ui/button.tsx",
+    "Card": "src/components/ui/card.tsx",
+    "PointsBadge": "src/components/ui/points-badge.tsx",
+    "StreakBadge": "src/components/ui/streak-badge.tsx",
+    "StreakCalendar": "src/components/ui/streak-calendar.tsx",
+    "StreakCard": "src/components/ui/streak-card.tsx",
+    "AchievementBadge": "src/components/ui/achievement-badge.tsx",
+    "AchievementGrid": "src/components/ui/achievement-grid.tsx",
+    "GamificationStrip": "src/components/GamificationStrip.tsx",
+    "GamificationPanel": null,
+    "App": null,
+    "Catalogue": null,
+    "Curriculum": null,
+    "Keys": null,
+    "Tutor": null
+  },
+  "extraFonts": [
+    "node_modules/@fontsource-variable/inter/index.css"
+  ],
+  "dtsPropsFor": {
+    "Button": "variant?: 'default' | 'outline' | 'secondary' | 'ghost' | 'destructive' | 'link'; size?: 'default' | 'sm' | 'lg' | 'icon' | 'icon-sm' | 'icon-lg'; asChild?: boolean; disabled?: boolean; children?: React.ReactNode; className?: string",
+    "Badge": "variant?: 'default' | 'secondary' | 'destructive' | 'outline' | 'ghost'; asChild?: boolean; children?: React.ReactNode; className?: string",
+    "Card": "children?: React.ReactNode; className?: string",
+    "PointsBadge": "name: string; total: number; size?: 'sm' | 'default' | 'lg'; badgeUrl?: string | null; icon?: React.ComponentType<{ className?: string }>; formatValue?: (value: number) => string; className?: string",
+    "StreakBadge": "length?: number; frequency?: 'daily' | 'weekly' | 'monthly'; subtitle?: string; icon?: React.ReactNode; size?: 'sm' | 'default' | 'lg'; className?: string",
+    "StreakCalendar": "streak: Array<{ periodStart: string; periodEnd: string; usedFreeze?: boolean }>; view?: 'week' | 'month' | 'year'; month?: Date; className?: string",
+    "StreakCard": "streak: Array<{ periodStart: string; periodEnd: string; usedFreeze?: boolean }>; currentStreak: number; longestStreak: number; total: number; title?: string; actionLabel?: string; onActionClick?: () => void; showHowItWorks?: boolean; howItWorksTitle?: string; howItWorksItems?: string[]; className?: string",
+    "AchievementBadge": "achievement: { id: string; name: string; trigger: 'metric' | 'api' | 'streak'; badgeUrl?: string | null; progress?: number; rarity?: number; achievedAt: string | null }; badgeSize?: 'sm' | 'default' | 'lg' | 'xl'; onAchievementClick?: (achievement: { id: string; name: string; trigger: 'metric' | 'api' | 'streak'; badgeUrl?: string | null; progress?: number; rarity?: number; achievedAt: string | null }) => void; className?: string",
+    "AchievementGrid": "achievements: Array<{ id: string; name: string; trigger: 'metric' | 'api' | 'streak'; badgeUrl?: string | null; progress?: number; rarity?: number; achievedAt: string | null }>; columns?: 2 | 3 | 4 | 'auto'; gap?: 'sm' | 'default' | 'lg'; badgeSize?: 'sm' | 'default' | 'lg'; onAchievementClick?: (achievement: { id: string; name: string; trigger: 'metric' | 'api' | 'streak'; badgeUrl?: string | null; progress?: number; rarity?: number; achievedAt: string | null }) => void; className?: string",
+    "GamificationStrip": "summary: { learner: { id: number; display_name: string | null; timezone: string }; total_xp: number; level: { level: number; name: string; xp_threshold: number } | null; next_level: { level: number; name: string; xp_threshold: number } | null; streak: { learner_id: number; current_len: number; longest_len: number; last_active_date: string | null } | null; awards: Array<{ code: string; awarded_at: string; title: string; icon: string | null }> } | null"
+  },
+  "overrides": {
+    "PointsBadge": {
+      "cardMode": "column"
+    },
+    "StreakBadge": {
+      "cardMode": "column"
+    },
+    "AchievementBadge": {
+      "cardMode": "column"
+    }
+  },
+  "readmeHeader": ".design-sync/conventions.md"
+}
