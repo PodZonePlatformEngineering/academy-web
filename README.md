@@ -45,6 +45,42 @@ are an operator step tracked in PROJ-011. The session JWT is attached to every
 Data API request (`src/lib/api.ts`) and RLS on `trainee.neon_auth_user_id` does
 the rest.
 
+## Theming / white-label
+
+Styling is two layers in `src/index.css` (design wave B5, D-14):
+
+1. **Brand tokens** — the warm Academy palette (`--clay-*`, `--ember-*`,
+   `--honey-*`, `--ink-*`, `--cream-*`, `--sage-*`, `--rust-*`), the type
+   families (self-hosted via `@fontsource-variable`; §5 forbids CDN fonts),
+   radii, shadows, motion.
+2. **Semantic derivation** — every shadcn var (`--primary`, `--background`,
+   `--card`, …) is defined `var(--brand-token)`, never a literal. Components
+   only ever see semantic vars.
+
+That derivation direction is the white-label contract: a theme is a CSS file
+in `src/themes/` that overrides **only layer 1** (plus its own font imports)
+and the entire app re-themes. `src/themes/quest-academy.css` (junior-school
+demo: royal blue/sunshine on sky-cream, Fredoka/Nunito, rounder radii) is the
+working proof.
+
+Themes load via `src/lib/theme.ts` (called once at boot in `main.tsx`):
+
+- `?theme=quest` on any URL — e.g.
+  `https://podzoneplatformengineering.github.io/academy-web/?theme=quest#/catalogue`.
+  The query sits before the hash fragment, so it survives HashRouter
+  navigation. Great for demos; remove the param for the stock warm brand.
+- `VITE_THEME=quest` at build time — pins a deployment to a theme (the
+  per-customer white-label build). Unset in CI, so the public deploy ships
+  the warm Academy brand.
+
+Themes are dynamic imports: Vite splits each theme (CSS + fonts) into its own
+chunk that only downloads when selected. There is deliberately no
+customer-facing theme picker (§9.2 — mechanism proof only).
+
+**Dark mode:** the design ships none. `src/index.css` carries a parked
+warm-dark derivation under `.dark` (ink-side surfaces, cream-side text) as a
+recorded proposal — unreachable until an operator-approved toggle exists.
+
 ## Develop
 
 ```sh
