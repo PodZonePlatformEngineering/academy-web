@@ -1,5 +1,6 @@
-import { useEffect, useState } from 'react'
+import { useCallback, useEffect, useState } from 'react'
 import { Link, useLocation, useParams } from 'react-router-dom'
+import GamificationStrip from '@/components/GamificationStrip'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import {
@@ -12,11 +13,20 @@ import {
 import {
   fetchCatalogue,
   fetchContent,
+  fetchEnrolmentId,
+  fetchGamification,
   fetchModules,
+  fetchProgress,
+  fetchSections,
+  markProgress,
   type CatalogueRow,
   type ContentRow,
+  type GamificationSummary,
   type ModuleRow,
+  type ProgressRow,
+  type SectionRow,
 } from '@/lib/api'
+import { moduleComplete, sectionsByModule, stateForPoint } from '@/lib/gamification'
 import { tutorConfigured } from '@/lib/tutorConfig'
 
 function Section({ row }: { row: ContentRow }) {
@@ -31,15 +41,76 @@ function Section({ row }: { row: ContentRow }) {
   )
 }
 
-function Module({ module }: { module: ModuleRow }) {
-  const [sections, setSections] = useState<ContentRow[] | null>(null)
+// One markable unit (section or lab). The mark is a self-attested progress
+// write via the mark_progress RPC — XP/streak/achievements happen server-side
+// in the 009 triggers, never here (D-6).
+function SectionMark({
+  section,
+  progress,
+  marking,
+  onMark,
+}: {
+  section: SectionRow
+  progress: ProgressRow[]
+  marking: boolean
+  onMark: (section: SectionRow) => void
+}) {
+  const state = stateForPoint(progress, section.anchor_point_id)
+  const label = section.kind === 'lab' ? 'Mark lab done' : 'Mark complete'
+  return (
+    <div className="flex items-center justify-between gap-2 rounded-md border px-3 py-2">
+      <div className="min-w-0">
+        <p className="truncate text-sm">
+          {section.kind === 'lab' ? section.title : `${section.section_id} — ${section.title}`}
+        </p>
+        <p className="text-xs text-muted-foreground">
+          {section.kind === 'lab'
+            ? 'lab'
+            : `${section.point_count} point${section.point_count === 1 ? '' : 's'}`}
+        </p>
+      </div>
+      <div className="flex shrink-0 items-center gap-2">
+        {state === 'complete' && <Badge>✓ complete</Badge>}
+        {state === 'in_progress' && <Badge variant="secondary">in progress</Badge>}
+        {state !== 'complete' && (
+          <Button
+            variant="outline"
+            size="sm"
+            disabled={marking}
+            title="Self-attested — recorded as your own completion mark"
+            onClick={() => onMark(section)}
+          >
+            {label}
+          </Button>
+        )}
+      </div>
+    </div>
+  )
+}
+
+function Module({
+  module,
+  sections,
+  progress,
+  marking,
+  onMark,
+}: {
+  module: ModuleRow
+  sections: SectionRow[]
+  progress: ProgressRow[]
+  marking: boolean
+  onMark: (section: SectionRow) => void
+}) {
+  const [content, setContent] = useState<ContentRow[] | null>(null)
   const [error, setError] = useState<string | null>(null)
   const [open, setOpen] = useState(false)
+  const openable = module.section_count > 0 || sections.length > 0
+  const completed = moduleComplete(progress, module.id)
 
   const toggle = () => {
     setOpen(!open)
-    if (!sections && module.code) {
-      fetchContent(module.curriculum_id, module.code).then(setSections, (e: Error) =>
+    if (!content && module.section_count > 0 && module.code) {
+      fetchContent(module.curriculum_id, module.code).then(setContent, (e: Error) =>
         setError(e.message),
       )
     }
@@ -51,28 +122,38 @@ function Module({ module }: { module: ModuleRow }) {
         <div className="flex items-center justify-between gap-2">
           <CardTitle className="text-base">{module.title}</CardTitle>
           <div className="flex items-center gap-2">
+            {completed && <Badge>✓ module complete</Badge>}
             <Badge variant="secondary">
-              {module.section_count} section{module.section_count === 1 ? '' : 's'}
+              {sections.length > 0
+                ? `${sections.length} section${sections.length === 1 ? '' : 's'}`
+                : `${module.section_count} section${module.section_count === 1 ? '' : 's'}`}
             </Badge>
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={toggle}
-              disabled={module.section_count === 0}
-            >
+            <Button variant="outline" size="sm" onClick={toggle} disabled={!openable}>
               {open ? 'Close' : 'Open'}
             </Button>
           </div>
         </div>
-        {module.section_count === 0 && (
+        {!openable && (
           <CardDescription>No sections visible — entitlement required.</CardDescription>
         )}
       </CardHeader>
       {open && (
         <CardContent className="space-y-3">
+          {sections.length > 0 && (
+            <div className="space-y-2">
+              {sections.map((s) => (
+                <SectionMark
+                  key={s.anchor_point_id}
+                  section={s}
+                  progress={progress}
+                  marking={marking}
+                  onMark={onMark}
+                />
+              ))}
+            </div>
+          )}
           {error && <p className="text-sm text-destructive">Content failed to load: {error}</p>}
-          {!error && !sections && <p className="text-sm text-muted-foreground">Loading…</p>}
-          {sections?.map((s) => <Section key={s.section_id ?? 'module'} row={s} />)}
+          {content?.map((s) => <Section key={s.section_id ?? 'module'} row={s} />)}
         </CardContent>
       )}
     </Card>
@@ -85,6 +166,11 @@ export default function Curriculum() {
   const seeded = (useLocation().state as { curriculum?: CatalogueRow } | null)?.curriculum
   const [curriculum, setCurriculum] = useState<CatalogueRow | null>(seeded ?? null)
   const [modules, setModules] = useState<ModuleRow[] | null>(null)
+  const [sections, setSections] = useState<SectionRow[]>([])
+  const [enrolmentId, setEnrolmentId] = useState<number | null>(null)
+  const [progress, setProgress] = useState<ProgressRow[]>([])
+  const [summary, setSummary] = useState<GamificationSummary | null>(null)
+  const [marking, setMarking] = useState(false)
   const [error, setError] = useState<string | null>(null)
 
   useEffect(() => {
@@ -98,10 +184,38 @@ export default function Curriculum() {
   useEffect(() => {
     if (!curriculum) return
     fetchModules(curriculum.id).then(setModules, (e: Error) => setError(e.message))
+    if (curriculum.access) {
+      // Entitled read of the markable units + own engine state; each is
+      // best-effort so a signed-out viewer still gets the module list.
+      fetchSections(curriculum.id).then(setSections, () => setSections([]))
+      fetchGamification().then(setSummary, () => setSummary(null))
+      fetchEnrolmentId(curriculum.id).then(setEnrolmentId, () => setEnrolmentId(null))
+    }
   }, [curriculum])
+
+  const refreshProgress = useCallback(() => {
+    if (enrolmentId === null) return
+    fetchProgress(enrolmentId).then(setProgress, () => setProgress([]))
+  }, [enrolmentId])
+
+  useEffect(refreshProgress, [refreshProgress])
+
+  const onMark = (section: SectionRow) => {
+    if (!curriculum) return
+    setMarking(true)
+    markProgress(curriculum.id, section.module_code, section.anchor_point_id)
+      .then((result) => {
+        if (result.summary) setSummary(result.summary)
+        refreshProgress()
+      })
+      .catch((e: Error) => setError(e.message))
+      .finally(() => setMarking(false))
+  }
 
   if (error) return <p className="text-sm text-destructive">Failed to load: {error}</p>
   if (!curriculum) return <p className="text-sm text-muted-foreground">Loading…</p>
+
+  const grouped = sectionsByModule(sections)
 
   return (
     <div className="space-y-4">
@@ -121,11 +235,21 @@ export default function Curriculum() {
         </div>
         <p className="text-sm text-muted-foreground">{curriculum.description}</p>
       </div>
+      <GamificationStrip summary={summary} />
       {!modules && <p className="text-sm text-muted-foreground">Loading modules…</p>}
       {modules && modules.length === 0 && (
         <p className="text-sm text-muted-foreground">No modules published yet.</p>
       )}
-      {modules?.map((m) => <Module key={m.id} module={m} />)}
+      {modules?.map((m) => (
+        <Module
+          key={m.id}
+          module={m}
+          sections={(m.code && grouped.get(m.code)) || []}
+          progress={progress}
+          marking={marking}
+          onMark={onMark}
+        />
+      ))}
     </div>
   )
 }
