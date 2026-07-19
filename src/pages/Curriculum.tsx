@@ -31,10 +31,8 @@ import { tutorConfigured } from '@/lib/tutorConfig'
 
 function Section({ row }: { row: ContentRow }) {
   return (
-    <div className="rounded-md border bg-muted/30 p-4">
-      <p className="mb-2 text-xs font-medium text-muted-foreground">
-        {row.section_id ?? 'module overview'}
-      </p>
+    <div className="rounded-lg border bg-muted/30 p-4">
+      <p className="micro mb-2 text-primary">{row.section_id ?? 'module overview'}</p>
       {/* Bodies are markdown source; MVP renders them verbatim (styling polish deferred). */}
       <pre className="whitespace-pre-wrap font-sans text-sm">{row.body}</pre>
     </div>
@@ -58,7 +56,7 @@ function SectionMark({
   const state = stateForPoint(progress, section.anchor_point_id)
   const label = section.kind === 'lab' ? 'Mark lab done' : 'Mark complete'
   return (
-    <div className="flex items-center justify-between gap-2 rounded-md border px-3 py-2">
+    <div className="flex items-center justify-between gap-2 rounded-lg border px-3 py-2">
       <div className="min-w-0">
         <p className="truncate text-sm">
           {section.kind === 'lab' ? section.title : `${section.section_id} — ${section.title}`}
@@ -70,7 +68,7 @@ function SectionMark({
         </p>
       </div>
       <div className="flex shrink-0 items-center gap-2">
-        {state === 'complete' && <Badge>✓ complete</Badge>}
+        {state === 'complete' && <Badge variant="success">✓ complete</Badge>}
         {state === 'in_progress' && <Badge variant="secondary">in progress</Badge>}
         {state !== 'complete' && (
           <Button
@@ -122,7 +120,7 @@ function Module({
         <div className="flex items-center justify-between gap-2">
           <CardTitle className="text-base">{module.title}</CardTitle>
           <div className="flex items-center gap-2">
-            {completed && <Badge>✓ module complete</Badge>}
+            {completed && <Badge variant="success">✓ module complete</Badge>}
             <Badge variant="secondary">
               {sections.length > 0
                 ? `${sections.length} section${sections.length === 1 ? '' : 's'}`
@@ -224,7 +222,7 @@ export default function Curriculum() {
           ← Catalogue
         </Link>
         <div className="mt-2 flex items-center justify-between gap-2">
-          <h1 className="text-xl font-semibold">{curriculum.title}</h1>
+          <h1 className="text-2xl font-semibold">{curriculum.title}</h1>
           {tutorConfigured && curriculum.access && (
             <Button asChild variant="outline" size="sm">
               <Link to={`/curriculum/${curriculum.slug}/tutor`} state={{ curriculum }}>

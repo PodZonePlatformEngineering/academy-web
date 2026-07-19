@@ -65,7 +65,7 @@ function Shell({ children }: { children: React.ReactNode }) {
       <header className="border-b">
         <div className="mx-auto flex max-w-4xl items-center justify-between px-4 py-3">
           <div className="flex items-center gap-6">
-            <Link to="/" className="text-lg font-semibold">
+            <Link to="/" className="font-heading text-lg font-semibold">
               PodZone Academy
             </Link>
             <Link to="/catalogue" className="text-sm text-muted-foreground hover:text-foreground">

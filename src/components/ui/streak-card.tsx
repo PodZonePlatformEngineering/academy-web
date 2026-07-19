@@ -72,7 +72,7 @@ const StreakCard = React.forwardRef<HTMLDivElement, StreakCardProps>(
       <section
         ref={ref}
         aria-label="Streak summary card"
-        className={cn("bg-card rounded-2xl border p-6 shadow-sm", className)}
+        className={cn("bg-card rounded-2xl border p-6 shadow-(--shadow-soft)", className)}
         {...props}
       >
         <header className="mb-3 flex items-center justify-between gap-3">

@@ -141,7 +141,7 @@ export default function GamificationPanel() {
           ]}
         />
         <div className="flex items-center justify-between gap-2">
-          <p className="text-sm font-medium">Achievements</p>
+          <p className="micro text-muted-foreground">Achievements</p>
           <p className="text-xs text-muted-foreground">
             {summary.awards.length} of {catalogue.length || '—'} earned
           </p>

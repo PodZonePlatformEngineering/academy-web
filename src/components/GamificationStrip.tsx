@@ -11,7 +11,7 @@ import type { GamificationSummary } from '@/lib/api'
 function GamificationStrip({ summary }: { summary: GamificationSummary | null }) {
   if (!summary) return null
   return (
-    <div className="flex flex-wrap items-center gap-3 rounded-md border bg-muted/30 px-3 py-2">
+    <div className="flex flex-wrap items-center gap-3 rounded-lg border bg-muted/30 px-3 py-2">
       <PointsBadge size="sm" name="XP" total={summary.total_xp} />
       <StreakBadge
         size="sm"

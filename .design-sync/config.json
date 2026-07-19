@@ -6,7 +6,7 @@
   "buildCmd": "npm run build",
   "srcDir": "src/components",
   "tsconfig": "tsconfig.app.json",
-  "cssEntry": "dist/assets/index-Ds-EZxF6.css",
+  "cssEntry": "dist/assets/index-BYG5Q6Xa.css",
   "componentSrcMap": {
     "Badge": "src/components/ui/badge.tsx",
     "Button": "src/components/ui/button.tsx",
@@ -32,7 +32,7 @@
   ],
   "dtsPropsFor": {
     "Button": "variant?: 'default' | 'outline' | 'secondary' | 'ghost' | 'destructive' | 'link'; size?: 'default' | 'sm' | 'lg' | 'icon' | 'icon-sm' | 'icon-lg'; asChild?: boolean; disabled?: boolean; children?: React.ReactNode; className?: string",
-    "Badge": "variant?: 'default' | 'secondary' | 'destructive' | 'outline' | 'ghost'; asChild?: boolean; children?: React.ReactNode; className?: string",
+    "Badge": "variant?: 'default' | 'secondary' | 'destructive' | 'success' | 'outline' | 'ghost'; asChild?: boolean; children?: React.ReactNode; className?: string",
     "Card": "children?: React.ReactNode; className?: string",
     "PointsBadge": "name: string; total: number; size?: 'sm' | 'default' | 'lg'; badgeUrl?: string | null; icon?: React.ComponentType<{ className?: string }>; formatValue?: (value: number) => string; className?: string",
     "StreakBadge": "length?: number; frequency?: 'daily' | 'weekly' | 'monthly'; subtitle?: string; icon?: React.ReactNode; size?: 'sm' | 'default' | 'lg'; className?: string",

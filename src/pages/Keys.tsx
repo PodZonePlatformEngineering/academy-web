@@ -74,7 +74,7 @@ function KeyPanel({ kind, title, custody, placeholder, validate }: KeyPanelProps
       </CardHeader>
       <CardContent className="space-y-3">
         {stored && (
-          <div className="flex items-center justify-between gap-2 rounded-md border bg-muted/30 p-3">
+          <div className="flex items-center justify-between gap-2 rounded-lg border bg-muted/30 p-3">
             <code className="text-sm">{maskKey(stored)}</code>
             <Button variant="outline" size="sm" onClick={clear}>
               Clear from this device
@@ -84,7 +84,7 @@ function KeyPanel({ kind, title, custody, placeholder, validate }: KeyPanelProps
         <div className="flex items-center gap-2">
           <input
             type="password"
-            className="h-9 w-full rounded-md border bg-background px-3 text-sm"
+            className="h-9 w-full rounded-lg border bg-white px-3 text-sm shadow-(--shadow-inset) transition-colors outline-none focus:border-primary focus:ring-3 focus:ring-primary/15"
             placeholder={stored ? `Replace: ${placeholder}` : placeholder}
             value={draft}
             onChange={(e) => setDraft(e.target.value)}
@@ -122,7 +122,7 @@ export default function Keys() {
   return (
     <div className="space-y-4">
       <div>
-        <h1 className="text-xl font-semibold">Your keys</h1>
+        <h1 className="text-2xl font-semibold">Your keys</h1>
         <p className="text-sm text-muted-foreground">
           Your key, your device, your spend. The key is stored only in this browser — it is
           never sent to the academy platform and never stored in our database. Clearing it
