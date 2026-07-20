@@ -42,7 +42,7 @@ const DATA_API_URL: string | undefined = import.meta.env.VITE_DATA_API_URL
 
 export const demoMode = !DATA_API_URL
 
-async function get<T>(pathAndQuery: string): Promise<T> {
+export async function get<T>(pathAndQuery: string): Promise<T> {
   const token = await getAccessToken()
   const res = await fetch(`${DATA_API_URL}${pathAndQuery}`, {
     headers: {

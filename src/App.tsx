@@ -1,5 +1,6 @@
 import { HashRouter, Link, Navigate, Route, Routes, useLocation } from 'react-router-dom'
 import AppNav from '@/components/AppNav'
+import { ConversationCacheProvider } from '@/components/ConversationCacheProvider'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Card, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
@@ -109,8 +110,9 @@ function RouteGate({ children }: { children: React.ReactNode }) {
 export default function App() {
   return (
     <AuthStateProvider>
-      <HashRouter>
-        <RouteGate>
+      <ConversationCacheProvider>
+        <HashRouter>
+          <RouteGate>
           {/* Legacy paths (/catalogue, /curriculum/:slug[/tutor], /keys) have
               no Route entries — RouteGate rewrites them before matching. */}
           <Routes>
@@ -164,8 +166,9 @@ export default function App() {
               }
             />
           </Routes>
-        </RouteGate>
-      </HashRouter>
+          </RouteGate>
+        </HashRouter>
+      </ConversationCacheProvider>
     </AuthStateProvider>
   )
 }
