@@ -16,6 +16,7 @@ import { Link, Navigate } from 'react-router-dom'
 import { Eye, EyeOff } from 'lucide-react'
 import { useConversationCache, type CachedConversation } from '@/components/ConversationCacheProvider'
 import GamificationStrip from '@/components/GamificationStrip'
+import MarkdownBody from '@/components/MarkdownBody'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Card, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
@@ -196,8 +197,7 @@ function ModuleSection({ row }: { row: ContentRow }) {
   return (
     <div className="rounded-lg border bg-muted/30 p-4">
       <p className="micro mb-2 text-primary">{row.section_id ?? 'module overview'}</p>
-      {/* Bodies are markdown source; MVP renders them verbatim (as the library view). */}
-      <pre className="whitespace-pre-wrap font-sans text-sm">{row.body}</pre>
+      <MarkdownBody>{row.body}</MarkdownBody>
     </div>
   )
 }

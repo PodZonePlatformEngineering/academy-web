@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useState } from 'react'
 import { Link, useLocation, useParams } from 'react-router-dom'
 import GamificationStrip from '@/components/GamificationStrip'
+import MarkdownBody from '@/components/MarkdownBody'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import {
@@ -34,8 +35,7 @@ function Section({ row }: { row: ContentRow }) {
   return (
     <div className="rounded-lg border bg-muted/30 p-4">
       <p className="micro mb-2 text-primary">{row.section_id ?? 'module overview'}</p>
-      {/* Bodies are markdown source; MVP renders them verbatim (styling polish deferred). */}
-      <pre className="whitespace-pre-wrap font-sans text-sm">{row.body}</pre>
+      <MarkdownBody>{row.body}</MarkdownBody>
     </div>
   )
 }
@@ -122,7 +122,9 @@ function Module({
       <CardHeader>
         <CardTitle className="text-base">{module.title}</CardTitle>
         {module.description && (
-          <CardDescription className="whitespace-pre-wrap">{module.description}</CardDescription>
+          <CardDescription>
+            <MarkdownBody className="prose-p:my-0">{module.description}</MarkdownBody>
+          </CardDescription>
         )}
         <div className="flex items-center justify-end gap-2">
           {completed && <Badge variant="success">✓ module complete</Badge>}
