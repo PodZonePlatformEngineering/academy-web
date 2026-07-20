@@ -1,14 +1,23 @@
-// Transcript capture (T-040 Task 3, D-3): tutor_session / tutor_turn rows
-// written through the Data API under RLS as the conversation proceeds.
+// Round persistence + cold-fill (T-048 B9, D-3): the tutor's durable memory.
 //
-// RLS (migration 008) means the JWT-resolved trainee can only insert sessions
-// for themselves and turns into their own sessions — the client supplies
-// trainee_id but the WITH CHECK policy is the gate. Token counts come from
-// the Messages API response per assistant turn; user turns carry none.
-// Everything written here is self-attested (D-3) and displayed as such; no
-// grading, no claims writes (D-10 — progress capture is B4/T-042).
+// B9 replaces the tutor_turn WRITE path with one `prompt` row per completed
+// round (question → retrieval → reply), written through the Data API under RLS
+// (academy-admin migration 020). RLS means the JWT-resolved trainee can only
+// insert rounds tagged with their own trainee_id — the client supplies it but
+// the WITH CHECK policy is the gate. `rag_result` carries retrieval REFS +
+// SCORES only (Q-2), never passage text — the bodies stay in the RLS-gated
+// curriculum_point store and are re-fetched on demand.
+//
+// `tutor_turn` writes STOP here, but the table (and recordTurn) are kept: its
+// operator-reviewed rows are the pre-`prompt` cold-fill history. On a cold
+// mount the most recent session's thread is re-hydrated from `prompt` rows
+// where they exist and from `tutor_turn` for pre-`prompt` sessions, rendered
+// as bubbles + source chips and re-seeded into the model history as visible
+// text only (the bounded-growth rule in tutor.ts is unchanged — old retrieval
+// blocks stay dropped). Everything here is self-attested (D-3).
 
-import { post } from '@/lib/api'
+import { demoMode, get, post } from '@/lib/api'
+import type { RetrievedPoint } from '@/lib/retrieval'
 
 export interface TutorSessionRow {
   id: number
@@ -29,6 +38,67 @@ export interface TutorTurnRow {
   created_at: string
 }
 
+// One retrieval hit as stored on a round: refs + score, no passage text (Q-2).
+// point_id is reserved — rag_search (migration 017) does not emit it yet, so
+// the label fields (module/section/title) are what re-render the chips today.
+export interface RagRef {
+  point_id: string | null
+  module_id: string | null
+  section_id: string | null
+  title: string | null
+  score: number
+}
+
+export interface PromptRow {
+  id: number
+  tutor_session_id: number
+  curriculum_id: number | null
+  created_at: string
+  input_prompt: string
+  rag_result: RagRef[]
+  response: string | null
+  model: string | null
+  prompt_tokens: number | null
+  completion_tokens: number | null
+}
+
+// The minimal shape the in-stream source chips read — satisfied by both a live
+// RetrievedPoint and a stored RagRef, so a loaded round chips exactly like a
+// live one.
+export interface ChipSource {
+  score: number
+  type?: string | null
+  module_id: string | null
+  section_id: string | null
+  title: string | null
+}
+
+// A rendered conversation turn (one chat bubble). Shared by the live stream
+// and the cold-fill re-hydration so both render through the same path.
+export interface ChatTurn {
+  role: 'user' | 'assistant'
+  text: string
+  /** Local time label under the bubble. */
+  at?: string
+  /** Model / passages / token meta line (assistant turns). */
+  meta?: string
+  /** Retrieval hits shown as chips above an assistant turn. */
+  sources?: ChipSource[]
+}
+
+/** Refs + scores for the round store, built from a turn's retrieval hits. */
+export function toRagResult(points: RetrievedPoint[]): RagRef[] {
+  return points.map((p) => ({
+    point_id: null,
+    module_id: p.module_id,
+    section_id: p.section_id,
+    title: p.title,
+    score: p.score,
+  }))
+}
+
+// --- Writes ----------------------------------------------------------------
+
 /** Open a transcript session; returns the created row (RLS-checked). */
 export async function startTutorSession(
   traineeId: number,
@@ -43,7 +113,41 @@ export async function startTutorSession(
   return rows[0]
 }
 
-/** Record one turn with the API-reported token counts (assistant turns). */
+export interface PromptRoundInput {
+  sessionId: number
+  traineeId: number
+  curriculumId: number
+  inputPrompt: string
+  ragResult: RagRef[]
+  response: string
+  model: string
+  promptTokens: number | null
+  completionTokens: number | null
+}
+
+/**
+ * Persist one completed round (B9 write path — replaces the two recordTurn
+ * calls). RLS re-checks trainee_id server-side.
+ */
+export async function recordPrompt(round: PromptRoundInput): Promise<PromptRow> {
+  const rows = await post<PromptRow[]>('/prompt', {
+    tutor_session_id: round.sessionId,
+    trainee_id: round.traineeId,
+    curriculum_id: round.curriculumId,
+    input_prompt: round.inputPrompt,
+    rag_result: round.ragResult,
+    response: round.response,
+    model: round.model,
+    prompt_tokens: round.promptTokens,
+    completion_tokens: round.completionTokens,
+  })
+  return rows[0]
+}
+
+/**
+ * Legacy per-turn write, KEPT for the read path only — the B9 write path is
+ * recordPrompt. `tutor_turn` still backs the pre-`prompt` cold-fill history.
+ */
 export async function recordTurn(
   sessionId: number,
   role: 'user' | 'assistant',
@@ -59,4 +163,200 @@ export async function recordTurn(
     completion_tokens: completionTokens,
   })
   return rows[0]
+}
+
+// --- Cold-fill reads -------------------------------------------------------
+
+// How many sessions per scan batch: cold-fill loads the first content-bearing
+// one (an opened-but-abandoned session carries no rounds); "load earlier"
+// walks the rest, batching further back by started_at when a scan runs dry.
+const COLD_FILL_SESSION_SCAN = 8
+
+const PROMPT_SELECT =
+  'id,tutor_session_id,curriculum_id,created_at,input_prompt,rag_result,' +
+  'response,model,prompt_tokens,completion_tokens'
+const TURN_SELECT = 'id,tutor_session_id,role,text,prompt_tokens,completion_tokens,created_at'
+
+/**
+ * The caller's recent sessions for a curriculum, newest first (RLS: own).
+ * `before` pages further back: only sessions started strictly earlier.
+ */
+export async function fetchRecentSessions(
+  curriculumId: number,
+  limit = COLD_FILL_SESSION_SCAN,
+  before?: string | null,
+): Promise<TutorSessionRow[]> {
+  const cutoff = before ? `&started_at=lt.${encodeURIComponent(before)}` : ''
+  return get<TutorSessionRow[]>(
+    `/tutor_session?curriculum_id=eq.${curriculumId}&order=started_at.desc&limit=${limit}${cutoff}` +
+      '&select=id,trainee_id,curriculum_id,model,started_at,ended_at',
+  )
+}
+
+/** The rounds of one session, oldest first (RLS: own). */
+export async function fetchPromptRounds(sessionId: number): Promise<PromptRow[]> {
+  return get<PromptRow[]>(
+    `/prompt?tutor_session_id=eq.${sessionId}&order=created_at.asc&select=${PROMPT_SELECT}`,
+  )
+}
+
+/** The pre-`prompt` turns of one session, oldest first (RLS: own). */
+export async function fetchSessionTurns(sessionId: number): Promise<TutorTurnRow[]> {
+  return get<TutorTurnRow[]>(
+    `/tutor_turn?tutor_session_id=eq.${sessionId}&order=created_at.asc,id.asc&select=${TURN_SELECT}`,
+  )
+}
+
+export interface ColdFill {
+  /** The session whose thread was loaded, or null when there is none. */
+  sessionId: number | null
+  /** started_at of that session — drives the today/new-session boundary. */
+  startedAt: string | null
+  /** The re-hydrated thread, oldest first. */
+  turns: ChatTurn[]
+  /** Scanned-but-unloaded older sessions "load earlier" walks (newest first). */
+  olderSessionIds: number[]
+  /** Batch cursor for sessions beyond the scan; null = nothing further back. */
+  oldestStartedAt: string | null
+}
+
+/** One session's thread: `prompt` rounds, else pre-`prompt` `tutor_turn` rows. */
+async function fetchSessionThread(sessionId: number): Promise<ChatTurn[]> {
+  const rounds = await fetchPromptRounds(sessionId)
+  if (rounds.length > 0) return rounds.flatMap(roundToTurns)
+  return turnRowsToTurns(await fetchSessionTurns(sessionId))
+}
+
+/**
+ * Re-hydrate the most recent content-bearing session for a curriculum. Prefers
+ * `prompt` rounds; falls back to pre-`prompt` `tutor_turn` history. Loads
+ * exactly one session — fetchEarlierThread pages the older ones.
+ */
+export async function fetchColdFill(curriculumId: number): Promise<ColdFill> {
+  const empty: ColdFill = {
+    sessionId: null,
+    startedAt: null,
+    turns: [],
+    olderSessionIds: [],
+    oldestStartedAt: null,
+  }
+  if (demoMode) return empty
+  const sessions = await fetchRecentSessions(curriculumId)
+  const oldestStartedAt =
+    sessions.length === COLD_FILL_SESSION_SCAN ? sessions[sessions.length - 1].started_at : null
+  for (let i = 0; i < sessions.length; i++) {
+    const turns = await fetchSessionThread(sessions[i].id)
+    if (turns.length > 0) {
+      return {
+        sessionId: sessions[i].id,
+        startedAt: sessions[i].started_at,
+        turns,
+        olderSessionIds: sessions.slice(i + 1).map((s) => s.id),
+        oldestStartedAt,
+      }
+    }
+  }
+  return { ...empty, oldestStartedAt }
+}
+
+export interface EarlierPage {
+  /** The next older session's thread, oldest first; empty = history exhausted. */
+  turns: ChatTurn[]
+  olderSessionIds: number[]
+  oldestStartedAt: string | null
+}
+
+/**
+ * The B9 tail: walk older sessions (skipping empty ones) until the next
+ * content-bearing thread, batching further back by started_at when the scanned
+ * ids run out. Returns the page plus the advanced cursor state.
+ */
+export async function fetchEarlierThread(
+  curriculumId: number,
+  olderSessionIds: number[],
+  oldestStartedAt: string | null,
+): Promise<EarlierPage> {
+  let ids = [...olderSessionIds]
+  let before = oldestStartedAt
+  for (;;) {
+    while (ids.length > 0) {
+      const id = ids.shift()!
+      const turns = await fetchSessionThread(id)
+      if (turns.length > 0) return { turns, olderSessionIds: ids, oldestStartedAt: before }
+    }
+    if (before === null) return { turns: [], olderSessionIds: [], oldestStartedAt: null }
+    const batch = await fetchRecentSessions(curriculumId, COLD_FILL_SESSION_SCAN, before)
+    ids = batch.map((s) => s.id)
+    before =
+      batch.length === COLD_FILL_SESSION_SCAN ? batch[batch.length - 1].started_at : null
+  }
+}
+
+// --- Pure row → bubble transforms (unit-tested; no I/O) --------------------
+
+function fmtTime(iso: string): string {
+  const d = new Date(iso)
+  return Number.isNaN(d.getTime())
+    ? ''
+    : d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+}
+
+/** The assistant meta line for a loaded round — mirrors the live stream's. */
+export function roundMeta(round: PromptRow): string {
+  const n = round.rag_result.length
+  const parts = [round.model ?? undefined, `${n} passage${n === 1 ? '' : 's'} retrieved`]
+  if (round.prompt_tokens != null || round.completion_tokens != null) {
+    parts.push(`${round.prompt_tokens ?? 0} in / ${round.completion_tokens ?? 0} out tokens (your spend)`)
+  }
+  return parts.filter(Boolean).join(' · ')
+}
+
+/** One stored round → its user + assistant bubbles. */
+export function roundToTurns(round: PromptRow): ChatTurn[] {
+  const at = fmtTime(round.created_at)
+  const turns: ChatTurn[] = [{ role: 'user', text: round.input_prompt, at }]
+  if (round.response != null) {
+    turns.push({
+      role: 'assistant',
+      text: round.response,
+      at,
+      meta: roundMeta(round),
+      sources: round.rag_result,
+    })
+  }
+  return turns
+}
+
+/** Pre-`prompt` turn rows → bubbles (old retrieval blocks stay dropped). */
+export function turnRowsToTurns(rows: TutorTurnRow[]): ChatTurn[] {
+  return rows
+    .filter((r): r is TutorTurnRow & { role: 'user' | 'assistant' } =>
+      r.role === 'user' || r.role === 'assistant')
+    .map((r) => ({ role: r.role, text: r.text, at: fmtTime(r.created_at) }))
+}
+
+/** The local calendar date of an ISO timestamp (YYYY-MM-DD). */
+export function localDate(iso: string): string {
+  const d = new Date(iso)
+  return Number.isNaN(d.getTime()) ? '' : toLocalDay(d)
+}
+
+function toLocalDay(d: Date): string {
+  const y = d.getFullYear()
+  const m = String(d.getMonth() + 1).padStart(2, '0')
+  const day = String(d.getDate()).padStart(2, '0')
+  return `${y}-${m}-${day}`
+}
+
+/**
+ * Session boundary (brief): continue the loaded session only when it started
+ * today (local), else the loaded thread is display-continuity for a NEW
+ * session opened on the next question — honest transcript boundaries.
+ */
+export function sessionToContinue(
+  cold: Pick<ColdFill, 'sessionId' | 'startedAt'>,
+  now: Date = new Date(),
+): number | null {
+  if (cold.sessionId === null || !cold.startedAt) return null
+  return localDate(cold.startedAt) === toLocalDay(now) ? cold.sessionId : null
 }

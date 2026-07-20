@@ -23,7 +23,8 @@ interface LessonOutlineItem {
   meta?: string
 }
 
-interface LessonOutlinePanelProps extends React.HTMLAttributes<HTMLElement> {
+interface LessonOutlinePanelProps
+  extends Omit<React.HTMLAttributes<HTMLElement>, "onSelect"> {
   /** Header eyebrow — what this rail shows. */
   eyebrow?: string
   title: string
@@ -34,6 +35,10 @@ interface LessonOutlinePanelProps extends React.HTMLAttributes<HTMLElement> {
   progressLabel?: string
   items: LessonOutlineItem[]
   itemsLabel?: string
+  /** When set, items become buttons — selecting one calls back with its id. */
+  onSelect?: (id: LessonOutlineItem["id"]) => void
+  /** The currently-open item, highlighted while its content overlay is up. */
+  selectedId?: LessonOutlineItem["id"]
   /** Slot under the outline — the self-attested badge lives here. */
   footer?: React.ReactNode
 }
@@ -47,6 +52,8 @@ function LessonOutlinePanel({
   progressLabel = "Progress",
   items,
   itemsLabel = "Modules",
+  onSelect,
+  selectedId,
   footer,
   ...props
 }: LessonOutlinePanelProps) {
@@ -94,12 +101,8 @@ function LessonOutlinePanel({
               {items.map((item) => {
                 const state = item.state ?? "not_started"
                 const Icon = stateIcon[state]
-                return (
-                  <li
-                    key={item.id}
-                    data-state={state}
-                    className="flex items-start gap-2.5 py-1.5"
-                  >
+                const row = (
+                  <>
                     <Icon
                       aria-hidden="true"
                       className={cn(
@@ -113,7 +116,7 @@ function LessonOutlinePanel({
                     />
                     <span
                       className={cn(
-                        "min-w-0 flex-1 text-[13px]",
+                        "min-w-0 flex-1 text-left text-[13px]",
                         state === "complete" &&
                           "text-muted-foreground line-through"
                       )}
@@ -124,6 +127,25 @@ function LessonOutlinePanel({
                       <span className="shrink-0 font-mono text-xs text-muted-foreground">
                         {item.meta}
                       </span>
+                    )}
+                  </>
+                )
+                return (
+                  <li key={item.id} data-state={state}>
+                    {onSelect ? (
+                      <button
+                        type="button"
+                        onClick={() => onSelect(item.id)}
+                        aria-current={selectedId === item.id || undefined}
+                        className={cn(
+                          "flex w-full items-start gap-2.5 rounded-md px-2 py-1.5 text-left transition-colors hover:bg-muted focus-visible:ring-3 focus-visible:ring-ring/50 focus-visible:outline-none",
+                          selectedId === item.id && "bg-muted"
+                        )}
+                      >
+                        {row}
+                      </button>
+                    ) : (
+                      <div className="flex items-start gap-2.5 py-1.5">{row}</div>
                     )}
                   </li>
                 )

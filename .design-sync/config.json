@@ -6,7 +6,7 @@
   "buildCmd": "npm run build",
   "srcDir": "src/components",
   "tsconfig": "tsconfig.app.json",
-  "cssEntry": "dist/assets/index-C58vdQQI.css",
+  "cssEntry": "dist/assets/index-CCI3lwNg.css",
   "componentSrcMap": {
     "Badge": "src/components/ui/badge.tsx",
     "Button": "src/components/ui/button.tsx",
@@ -51,7 +51,7 @@
     "ChatBubble": "role?: 'user' | 'tutor' | 'system'; streaming?: boolean; timestamp?: React.ReactNode; children?: React.ReactNode; className?: string",
     "LessonCard": "variant?: 'card' | 'chip'; eyebrow?: string; title: string; meta?: string; actionLabel?: string; onAction?: () => void; className?: string",
     "ChatComposer": "value: string; onValueChange: (value: string) => void; onSend: () => void; disabled?: boolean; busy?: boolean; placeholder?: string; hint?: React.ReactNode; className?: string",
-    "LessonOutlinePanel": "eyebrow?: string; title: string; subtitle?: string; progressPct?: number; progressLabel?: string; items: Array<{ id: string | number; label: string; state?: 'not_started' | 'in_progress' | 'complete'; meta?: string }>; itemsLabel?: string; footer?: React.ReactNode; className?: string"
+    "LessonOutlinePanel": "eyebrow?: string; title: string; subtitle?: string; progressPct?: number; progressLabel?: string; items: Array<{ id: string | number; label: string; state?: 'not_started' | 'in_progress' | 'complete'; meta?: string }>; itemsLabel?: string; onSelect?: (id: string | number) => void; selectedId?: string | number; footer?: React.ReactNode; className?: string"
   },
   "overrides": {
     "PointsBadge": {
