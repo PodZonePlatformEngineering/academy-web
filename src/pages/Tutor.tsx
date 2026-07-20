@@ -247,7 +247,9 @@ function ModuleContentOverlay({
         {error && <p className="text-sm text-destructive">Content failed to load: {error}</p>}
         {content?.length === 0 && (
           <p className="text-sm text-muted-foreground">
-            No content visible — entitlement required.
+            {curriculum.access
+              ? 'This module has no content yet.'
+              : 'No content visible — entitlement required.'}
           </p>
         )}
         {content && content.length > 0 && (
