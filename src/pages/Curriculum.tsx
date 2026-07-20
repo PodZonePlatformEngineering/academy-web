@@ -92,12 +92,14 @@ function Module({
   sections,
   progress,
   marking,
+  entitled,
   onMark,
 }: {
   module: ModuleRow
   sections: SectionRow[]
   progress: ProgressRow[]
   marking: boolean
+  entitled: boolean
   onMark: (section: SectionRow) => void
 }) {
   const [content, setContent] = useState<ContentRow[] | null>(null)
@@ -133,7 +135,9 @@ function Module({
           </div>
         </div>
         {!openable && (
-          <CardDescription>No sections visible — entitlement required.</CardDescription>
+          <CardDescription>
+            {entitled ? 'This module has no content yet.' : 'No sections visible — entitlement required.'}
+          </CardDescription>
         )}
       </CardHeader>
       {open && (
@@ -249,6 +253,7 @@ export default function Curriculum() {
           sections={(m.code && grouped.get(m.code)) || []}
           progress={progress}
           marking={marking}
+          entitled={curriculum.access}
           onMark={onMark}
         />
       ))}
