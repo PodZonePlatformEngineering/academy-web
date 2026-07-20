@@ -109,6 +109,6 @@ describe('sessionToContinue', () => {
     expect(sessionToContinue(cold, twoDaysOn)).toBeNull()
   })
   it('is null when nothing was loaded', () => {
-    expect(sessionToContinue({ sessionId: null, startedAt: null, turns: [] })).toBeNull()
+    expect(sessionToContinue({ sessionId: null, startedAt: null })).toBeNull()
   })
 })

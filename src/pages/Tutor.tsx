@@ -61,6 +61,7 @@ import { retrieve } from '@/lib/retrieval'
 import { composeUserTurn, streamTutorReply, type TutorTurn } from '@/lib/tutor'
 import {
   fetchColdFill,
+  fetchEarlierThread,
   recordPrompt,
   sessionToContinue,
   startTutorSession,
@@ -281,7 +282,10 @@ export default function Tutor() {
   const [summary, setSummary] = useState<GamificationSummary | null>(null)
   const [openModule, setOpenModule] = useState<ModuleRow | null>(null)
   const [mobilePane, setMobilePane] = useState<'progress' | 'outline' | null>(null)
+  const [loadingEarlier, setLoadingEarlier] = useState(false)
   const endRef = useRef<HTMLDivElement>(null)
+  // A prepend ("load earlier") must not yank the reader to the thread's end.
+  const skipFollowRef = useRef(false)
 
   // Device-persisted pane visibility (desktop rails).
   const [progressHidden, setProgressHidden] = usePersistentBool('academy.tutor.pane.progress', false)
@@ -376,10 +380,19 @@ export default function Tutor() {
           turns: cold.turns,
           sessionId: sessionToContinue(cold),
           loaded: true,
+          olderSessionIds: cold.olderSessionIds,
+          oldestStartedAt: cold.oldestStartedAt,
         })
       },
       () => {
-        if (live) setConversation(id, { turns: [], sessionId: null, loaded: true })
+        if (live)
+          setConversation(id, {
+            turns: [],
+            sessionId: null,
+            loaded: true,
+            olderSessionIds: [],
+            oldestStartedAt: null,
+          })
       },
     )
     return () => {
@@ -389,6 +402,10 @@ export default function Tutor() {
 
   // Follow the conversation as exchanges land.
   useEffect(() => {
+    if (skipFollowRef.current) {
+      skipFollowRef.current = false
+      return
+    }
     if (turns.length > 0) endRef.current?.scrollIntoView({ behavior: 'smooth', block: 'nearest' })
   }, [turns, streaming])
 
@@ -431,7 +448,13 @@ export default function Tutor() {
 
   const setThread = (update: (c: CachedConversation) => CachedConversation) => {
     if (cid === null) return
-    const current = getConversation(cid) ?? { turns: [], sessionId: null, loaded: true }
+    const current = getConversation(cid) ?? {
+      turns: [],
+      sessionId: null,
+      loaded: true,
+      olderSessionIds: [],
+      oldestStartedAt: null,
+    }
     setConversation(cid, update(current))
   }
 
@@ -452,6 +475,30 @@ export default function Tutor() {
   const selectModule = (id: string | number) => {
     const m = modules.find((mod) => mod.id === id)
     if (m) setOpenModule(m)
+  }
+
+  // The B9 tail: prepend the next older content-bearing session's thread.
+  // Earlier rounds join the visible history (and so the model context) exactly
+  // as cold-filled ones do.
+  const loadEarlier = async () => {
+    if (cid === null || loadingEarlier) return
+    const current = getConversation(cid)
+    if (!current) return
+    setLoadingEarlier(true)
+    try {
+      const page = await fetchEarlierThread(cid, current.olderSessionIds, current.oldestStartedAt)
+      skipFollowRef.current = true
+      setThread((c) => ({
+        ...c,
+        turns: [...page.turns, ...c.turns],
+        olderSessionIds: page.olderSessionIds,
+        oldestStartedAt: page.oldestStartedAt,
+      }))
+    } catch (e) {
+      setTranscriptNote(`Earlier history failed to load: ${String(e)}`)
+    } finally {
+      setLoadingEarlier(false)
+    }
   }
 
   const send = async () => {
@@ -616,6 +663,18 @@ export default function Tutor() {
 
         <div className="min-w-0 flex-1 space-y-4">
           <div className="flex flex-col gap-2.5">
+            {convo !== undefined &&
+              (convo.olderSessionIds.length > 0 || convo.oldestStartedAt !== null) && (
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  className="self-center text-muted-foreground"
+                  disabled={loadingEarlier}
+                  onClick={loadEarlier}
+                >
+                  {loadingEarlier ? 'Loading earlier rounds…' : 'Load earlier rounds'}
+                </Button>
+              )}
             {turns.length === 0 && streaming === null && (
               <ChatBubble role="system">
                 Ask anything about {curriculum.title} — answers are grounded in your course material.

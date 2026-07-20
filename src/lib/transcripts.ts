@@ -167,9 +167,9 @@ export async function recordTurn(
 
 // --- Cold-fill reads -------------------------------------------------------
 
-// How many recent sessions to scan for the first content-bearing one (an
-// opened-but-abandoned session carries no rounds). MVP loads that one session;
-// "load earlier" paging over older sessions is the deferred B9 tail.
+// How many sessions per scan batch: cold-fill loads the first content-bearing
+// one (an opened-but-abandoned session carries no rounds); "load earlier"
+// walks the rest, batching further back by started_at when a scan runs dry.
 const COLD_FILL_SESSION_SCAN = 8
 
 const PROMPT_SELECT =
@@ -177,13 +177,18 @@ const PROMPT_SELECT =
   'response,model,prompt_tokens,completion_tokens'
 const TURN_SELECT = 'id,tutor_session_id,role,text,prompt_tokens,completion_tokens,created_at'
 
-/** The caller's recent sessions for a curriculum, newest first (RLS: own). */
+/**
+ * The caller's recent sessions for a curriculum, newest first (RLS: own).
+ * `before` pages further back: only sessions started strictly earlier.
+ */
 export async function fetchRecentSessions(
   curriculumId: number,
   limit = COLD_FILL_SESSION_SCAN,
+  before?: string | null,
 ): Promise<TutorSessionRow[]> {
+  const cutoff = before ? `&started_at=lt.${encodeURIComponent(before)}` : ''
   return get<TutorSessionRow[]>(
-    `/tutor_session?curriculum_id=eq.${curriculumId}&order=started_at.desc&limit=${limit}` +
+    `/tutor_session?curriculum_id=eq.${curriculumId}&order=started_at.desc&limit=${limit}${cutoff}` +
       '&select=id,trainee_id,curriculum_id,model,started_at,ended_at',
   )
 }
@@ -209,29 +214,82 @@ export interface ColdFill {
   startedAt: string | null
   /** The re-hydrated thread, oldest first. */
   turns: ChatTurn[]
+  /** Scanned-but-unloaded older sessions "load earlier" walks (newest first). */
+  olderSessionIds: number[]
+  /** Batch cursor for sessions beyond the scan; null = nothing further back. */
+  oldestStartedAt: string | null
+}
+
+/** One session's thread: `prompt` rounds, else pre-`prompt` `tutor_turn` rows. */
+async function fetchSessionThread(sessionId: number): Promise<ChatTurn[]> {
+  const rounds = await fetchPromptRounds(sessionId)
+  if (rounds.length > 0) return rounds.flatMap(roundToTurns)
+  return turnRowsToTurns(await fetchSessionTurns(sessionId))
 }
 
 /**
  * Re-hydrate the most recent content-bearing session for a curriculum. Prefers
- * `prompt` rounds; falls back to pre-`prompt` `tutor_turn` history. MVP loads
- * exactly one session (the deferred tail pages older ones).
+ * `prompt` rounds; falls back to pre-`prompt` `tutor_turn` history. Loads
+ * exactly one session — fetchEarlierThread pages the older ones.
  */
 export async function fetchColdFill(curriculumId: number): Promise<ColdFill> {
-  const empty: ColdFill = { sessionId: null, startedAt: null, turns: [] }
+  const empty: ColdFill = {
+    sessionId: null,
+    startedAt: null,
+    turns: [],
+    olderSessionIds: [],
+    oldestStartedAt: null,
+  }
   if (demoMode) return empty
   const sessions = await fetchRecentSessions(curriculumId)
-  for (const s of sessions) {
-    const rounds = await fetchPromptRounds(s.id)
-    if (rounds.length > 0) {
-      return { sessionId: s.id, startedAt: s.started_at, turns: rounds.flatMap(roundToTurns) }
-    }
-    const turns = await fetchSessionTurns(s.id)
-    const rendered = turnRowsToTurns(turns)
-    if (rendered.length > 0) {
-      return { sessionId: s.id, startedAt: s.started_at, turns: rendered }
+  const oldestStartedAt =
+    sessions.length === COLD_FILL_SESSION_SCAN ? sessions[sessions.length - 1].started_at : null
+  for (let i = 0; i < sessions.length; i++) {
+    const turns = await fetchSessionThread(sessions[i].id)
+    if (turns.length > 0) {
+      return {
+        sessionId: sessions[i].id,
+        startedAt: sessions[i].started_at,
+        turns,
+        olderSessionIds: sessions.slice(i + 1).map((s) => s.id),
+        oldestStartedAt,
+      }
     }
   }
-  return empty
+  return { ...empty, oldestStartedAt }
+}
+
+export interface EarlierPage {
+  /** The next older session's thread, oldest first; empty = history exhausted. */
+  turns: ChatTurn[]
+  olderSessionIds: number[]
+  oldestStartedAt: string | null
+}
+
+/**
+ * The B9 tail: walk older sessions (skipping empty ones) until the next
+ * content-bearing thread, batching further back by started_at when the scanned
+ * ids run out. Returns the page plus the advanced cursor state.
+ */
+export async function fetchEarlierThread(
+  curriculumId: number,
+  olderSessionIds: number[],
+  oldestStartedAt: string | null,
+): Promise<EarlierPage> {
+  let ids = [...olderSessionIds]
+  let before = oldestStartedAt
+  for (;;) {
+    while (ids.length > 0) {
+      const id = ids.shift()!
+      const turns = await fetchSessionThread(id)
+      if (turns.length > 0) return { turns, olderSessionIds: ids, oldestStartedAt: before }
+    }
+    if (before === null) return { turns: [], olderSessionIds: [], oldestStartedAt: null }
+    const batch = await fetchRecentSessions(curriculumId, COLD_FILL_SESSION_SCAN, before)
+    ids = batch.map((s) => s.id)
+    before =
+      batch.length === COLD_FILL_SESSION_SCAN ? batch[batch.length - 1].started_at : null
+  }
 }
 
 // --- Pure row → bubble transforms (unit-tested; no I/O) --------------------
@@ -295,7 +353,10 @@ function toLocalDay(d: Date): string {
  * today (local), else the loaded thread is display-continuity for a NEW
  * session opened on the next question — honest transcript boundaries.
  */
-export function sessionToContinue(cold: ColdFill, now: Date = new Date()): number | null {
+export function sessionToContinue(
+  cold: Pick<ColdFill, 'sessionId' | 'startedAt'>,
+  now: Date = new Date(),
+): number | null {
   if (cold.sessionId === null || !cold.startedAt) return null
   return localDate(cold.startedAt) === toLocalDay(now) ? cold.sessionId : null
 }

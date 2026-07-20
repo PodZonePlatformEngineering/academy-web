@@ -24,6 +24,10 @@ export interface CachedConversation {
   sessionId: number | null
   /** Cold-fill has completed for this curriculum — do not refetch. */
   loaded: boolean
+  /** "Load earlier" cursor: unloaded older session ids (newest first). */
+  olderSessionIds: number[]
+  /** "Load earlier" cursor: batch further back from here; null = exhausted. */
+  oldestStartedAt: string | null
 }
 
 interface ConversationCache {
