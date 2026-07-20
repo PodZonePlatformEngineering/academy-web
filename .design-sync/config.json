@@ -6,7 +6,7 @@
   "buildCmd": "npm run build",
   "srcDir": "src/components",
   "tsconfig": "tsconfig.app.json",
-  "cssEntry": "dist/assets/index-CCI3lwNg.css",
+  "cssEntry": "dist/assets/index-B-22RjzD.css",
   "componentSrcMap": {
     "Badge": "src/components/ui/badge.tsx",
     "Button": "src/components/ui/button.tsx",
