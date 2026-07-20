@@ -120,19 +120,20 @@ function Module({
   return (
     <Card>
       <CardHeader>
-        <div className="flex items-center justify-between gap-2">
-          <CardTitle className="text-base">{module.title}</CardTitle>
-          <div className="flex items-center gap-2">
-            {completed && <Badge variant="success">✓ module complete</Badge>}
-            <Badge variant="secondary">
-              {sections.length > 0
-                ? `${sections.length} section${sections.length === 1 ? '' : 's'}`
-                : `${module.section_count} section${module.section_count === 1 ? '' : 's'}`}
-            </Badge>
-            <Button variant="outline" size="sm" onClick={toggle} disabled={!openable}>
-              {open ? 'Close' : 'Open'}
-            </Button>
-          </div>
+        <CardTitle className="text-base">{module.title}</CardTitle>
+        {module.description && (
+          <CardDescription className="whitespace-pre-wrap">{module.description}</CardDescription>
+        )}
+        <div className="flex items-center justify-end gap-2">
+          {completed && <Badge variant="success">✓ module complete</Badge>}
+          <Badge variant="secondary">
+            {sections.length > 0
+              ? `${sections.length} section${sections.length === 1 ? '' : 's'}`
+              : `${module.section_count} section${module.section_count === 1 ? '' : 's'}`}
+          </Badge>
+          <Button variant="outline" size="sm" onClick={toggle} disabled={!openable}>
+            {open ? 'Close' : 'Open'}
+          </Button>
         </div>
         {!openable && (
           <CardDescription>

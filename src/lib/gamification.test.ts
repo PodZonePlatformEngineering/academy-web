@@ -149,6 +149,7 @@ describe('moduleOutline / outlineProgressPct', () => {
     title,
     ordinal: id,
     section_count: count,
+    description: null,
   })
   const sec = (module: string, section: string, anchor: string): SectionRow => ({
     curriculum_id: 5,

@@ -28,6 +28,7 @@ export interface ModuleRow {
   title: string
   ordinal: number
   section_count: number
+  description: string | null
 }
 
 export interface ContentRow {
@@ -124,6 +125,7 @@ const demoModules: ModuleRow[] = [
     title: 'T-039 Acceptance Module',
     ordinal: 999,
     section_count: 1,
+    description: 'A short demo module used to prove the acceptance path end to end.',
   },
 ]
 
