@@ -362,3 +362,56 @@ export async function updateTimezone(traineeId: number, timezone: string): Promi
   if (demoMode) return
   await patch(`/trainee?id=eq.${traineeId}`, { timezone })
 }
+
+// --- Self-service onboarding (T-073, admin migration 027) ------------------
+//
+// One SECURITY DEFINER RPC covers both linking a pre-provisioned trainee to a
+// fresh Neon Auth sign-in and creating a brand-new self-service trainee. It
+// acts only for the caller's own auth.user_id() (read from the JWT, never a
+// parameter), so the no-arg call is a safe post-auth resolve: it auto-links a
+// matching unlinked trainee (Eben + the alpha/beta cohort) and otherwise
+// reports needs_profile without writing. Called with profile args it creates
+// the trainee, grants full entitlement, and enrols them on the chosen start
+// programme.
+
+export type ProvisionStatus = 'exists' | 'linked' | 'created' | 'needs_profile'
+
+export interface ProvisionedTrainee {
+  id: number
+  display_name: string
+  email: string | null
+  neon_auth_user_id: string | null
+  intake_profile: Record<string, unknown> | null
+}
+
+export interface ProvisionResult {
+  status: ProvisionStatus
+  trainee: ProvisionedTrainee | null
+}
+
+export interface IntakeProfile {
+  background?: string
+  goals?: string
+  [k: string]: unknown
+}
+
+export interface ProvisionArgs {
+  displayName?: string | null
+  startCurriculumId?: number | null
+  intakeProfile?: IntakeProfile | null
+}
+
+/**
+ * Resolve or create the caller's trainee. No-arg = post-auth resolve
+ * (link-or-report, no write on the needs_profile path); with args = form
+ * submit (create). In demo / auth-unconfigured builds there is no backend, so
+ * the caller is reported as already provisioned rather than trapped pre-tutor.
+ */
+export async function provisionOrLinkTrainee(args: ProvisionArgs = {}): Promise<ProvisionResult> {
+  if (demoMode) return { status: 'exists', trainee: null }
+  return post<ProvisionResult>('/rpc/provision_or_link_trainee', {
+    p_display_name: args.displayName ?? null,
+    p_start_curriculum_id: args.startCurriculumId ?? null,
+    p_intake_profile: args.intakeProfile ?? null,
+  })
+}

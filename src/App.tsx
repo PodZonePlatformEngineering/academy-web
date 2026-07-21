@@ -13,6 +13,7 @@ import Catalogue from '@/pages/Catalogue'
 import Curriculum from '@/pages/Curriculum'
 import Home from '@/pages/Home'
 import Landing from '@/pages/Landing'
+import ProfileManagement from '@/pages/ProfileManagement'
 import Scoreboard from '@/pages/Scoreboard'
 import Tutor from '@/pages/Tutor'
 
@@ -93,9 +94,9 @@ function NotFound() {
 // table — the decision itself is pure and lives (with its tests) in
 // lib/routing.ts.
 function RouteGate({ children }: { children: React.ReactNode }) {
-  const { visitor } = useAuthState()
+  const { visitor, provision } = useAuthState()
   const { pathname } = useLocation()
-  const decision = routeDecision(pathname, visitor)
+  const decision = routeDecision(pathname, visitor, provision)
   if (decision.action === 'hold') return null
   if (decision.action === 'redirect') {
     // The legacy tutor deep link carries its curriculum — record it as
@@ -154,6 +155,14 @@ export default function App() {
               element={
                 <Shell>
                   <Home />
+                </Shell>
+              }
+            />
+            <Route
+              path="/profile"
+              element={
+                <Shell>
+                  <ProfileManagement />
                 </Shell>
               }
             />
