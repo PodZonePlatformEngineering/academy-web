@@ -6,8 +6,10 @@
 // lands them on the tutor. No email round-trip, no agent job.
 //
 // The already-provisioned case (reached via the Home link) shows the same form
-// as a view/edit stub — the RPC ignores profile args once linked, so a resubmit
-// simply returns them to the tutor. Structured editing lands in a later brief.
+// hydrated from the stored trainee (display name + intake background/goals, and
+// the current active enrolment in the start dropdown). Editing a field and
+// saving persists it — the RPC's update path (T-076) writes the changed intake
+// — then returns them to the tutor.
 
 import { type FormEvent, useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
@@ -20,7 +22,12 @@ import {
   CardTitle,
 } from '@/components/ui/card'
 import { recordCurriculumUsed } from '@/lib/activeCurriculum'
-import { fetchCatalogue, provisionOrLinkTrainee, type CatalogueRow } from '@/lib/api'
+import {
+  fetchCatalogue,
+  fetchEnrolments,
+  provisionOrLinkTrainee,
+  type CatalogueRow,
+} from '@/lib/api'
 import { useAuthState } from '@/lib/auth-state'
 
 const fieldClass =
@@ -81,6 +88,55 @@ export default function ProfileManagement() {
     }
   }, [])
 
+  // Returning (already-provisioned) user: hydrate the form from the stored
+  // trainee so Manage Profile opens on the current values rather than blank
+  // fields (#21). The no-arg resolve returns {status:'exists', trainee} for a
+  // provisioned caller and writes nothing; the trainee's display name wins
+  // over the auth-identity baseline above, and background/goals come from the
+  // same intake keys the submit writes.
+  useEffect(() => {
+    if (!returning) return
+    let cancelled = false
+    provisionOrLinkTrainee()
+      .then(({ trainee }) => {
+        if (cancelled || !trainee) return
+        if (trainee.display_name) setDisplayName(trainee.display_name)
+        const intake = trainee.intake_profile
+        if (intake) {
+          const { background: bg, goals: gl } = intake as {
+            background?: unknown
+            goals?: unknown
+          }
+          if (typeof bg === 'string') setBackground(bg)
+          if (typeof gl === 'string') setGoals(gl)
+        }
+      })
+      .catch(() => {
+        /* keep the auth-derived display name; the form still submits */
+      })
+    return () => {
+      cancelled = true
+    }
+  }, [returning])
+
+  // Best-effort: reflect the current active enrolment in the start-programme
+  // dropdown (the intake profile carries background/goals, not the enrolment).
+  // Cheap RLS-scoped read; on any failure the dropdown just stays unselected.
+  useEffect(() => {
+    if (!returning) return
+    let cancelled = false
+    fetchEnrolments()
+      .then((rows) => {
+        if (!cancelled && rows[0]) setStartId(rows[0].curriculum_id)
+      })
+      .catch(() => {
+        /* leave the dropdown unselected */
+      })
+    return () => {
+      cancelled = true
+    }
+  }, [returning])
+
   const canSubmit = displayName.trim().length > 0 && !submitting
 
   async function onSubmit(e: FormEvent) {
@@ -118,7 +174,7 @@ export default function ProfileManagement() {
         </h1>
         <p className="text-sm text-muted-foreground">
           {returning
-            ? 'This is the profile that shapes your tutoring. Editing individual fields lands in a later update — for now, resubmit to return to the tutor.'
+            ? 'This is the profile that shapes your tutoring. Update any field and save to keep it current — your changes travel into every session.'
             : "Tell us who you are and where you'd like to start. We'll set up your academy and take you straight to the tutor — no email, no waiting."}
         </p>
       </div>
