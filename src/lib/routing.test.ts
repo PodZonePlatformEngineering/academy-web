@@ -115,3 +115,64 @@ describe('routeDecision — everything else is unaffected', () => {
     },
   )
 })
+
+describe('routeDecision — self-service provisioning funnel (T-073)', () => {
+  it('defaults to provisioned when no provision state is passed (back-compat)', () => {
+    expect(routeDecision('/', 'signed-in')).toEqual({ action: 'redirect', to: '/tutor' })
+    expect(routeDecision('/tutor', 'signed-in')).toEqual({ action: 'render' })
+  })
+
+  it('holds "/" and gated routes while the trainee status is still resolving', () => {
+    for (const path of ['/', '/tutor', '/scoreboard', '/home']) {
+      expect(routeDecision(path, 'signed-in', 'unknown')).toEqual({ action: 'hold' })
+    }
+  })
+
+  it('funnels an unprovisioned signed-in user to /profile from "/" and gated routes', () => {
+    for (const path of ['/', '/tutor', '/scoreboard', '/home']) {
+      expect(routeDecision(path, 'signed-in', 'needs-profile')).toEqual({
+        action: 'redirect',
+        to: '/profile',
+      })
+    }
+  })
+
+  it('lets a provisioned signed-in user through — "/" to the tutor, gated routes render', () => {
+    expect(routeDecision('/', 'signed-in', 'provisioned')).toEqual({
+      action: 'redirect',
+      to: '/tutor',
+    })
+    for (const path of ['/tutor', '/scoreboard', '/home']) {
+      expect(routeDecision(path, 'signed-in', 'provisioned')).toEqual({ action: 'render' })
+    }
+  })
+
+  it('never funnels the open library, whatever the provisioning state', () => {
+    for (const provision of ['unknown', 'needs-profile', 'provisioned'] as const) {
+      expect(routeDecision('/library', 'signed-in', provision)).toEqual({ action: 'render' })
+      expect(routeDecision('/library/prompt-eng', 'signed-in', provision)).toEqual({
+        action: 'render',
+      })
+    }
+  })
+})
+
+describe('routeDecision — the /profile route', () => {
+  it('needs a session — signed-out falls back to the landing', () => {
+    expect(routeDecision('/profile', 'signed-out')).toEqual({ action: 'redirect', to: '/' })
+  })
+
+  it('holds while the session resolves', () => {
+    expect(routeDecision('/profile', 'unknown')).toEqual({ action: 'hold' })
+  })
+
+  it('renders for a signed-in user in any provisioning state (form or view)', () => {
+    for (const provision of ['unknown', 'needs-profile', 'provisioned'] as const) {
+      expect(routeDecision('/profile', 'signed-in', provision)).toEqual({ action: 'render' })
+    }
+  })
+
+  it('is not gated by isGated (it has its own signed-in-but-no-profile rule)', () => {
+    expect(isGated('/profile')).toBe(false)
+  })
+})

@@ -3,9 +3,11 @@
 // the retired /keys page + the theme picker), and short static help. /keys
 // redirects here.
 
+import { Link } from 'react-router-dom'
 import { Avatar } from '@/components/AppNav'
 import KeyVault from '@/components/KeyVault'
 import { Badge } from '@/components/ui/badge'
+import { Button } from '@/components/ui/button'
 import {
   Card,
   CardContent,
@@ -105,9 +107,12 @@ export default function Home() {
                 <p className="truncate text-sm text-muted-foreground">{user.email}</p>
               )}
             </div>
-            <Badge variant="outline" className="ml-auto shrink-0">
-              Neon Auth identity
-            </Badge>
+            <div className="ml-auto flex shrink-0 items-center gap-2">
+              <Button variant="outline" size="sm" asChild>
+                <Link to="/profile">Manage profile</Link>
+              </Button>
+              <Badge variant="outline">Neon Auth identity</Badge>
+            </div>
           </CardContent>
         </Card>
       )}
