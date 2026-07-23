@@ -38,9 +38,9 @@
     "node_modules/@fontsource-variable/jetbrains-mono/index.css"
   ],
   "dtsPropsFor": {
-    "Button": "variant?: 'default' | 'outline' | 'secondary' | 'ghost' | 'destructive' | 'link'; size?: 'default' | 'sm' | 'lg' | 'icon' | 'icon-sm' | 'icon-lg'; asChild?: boolean; disabled?: boolean; children?: React.ReactNode; className?: string",
-    "Badge": "variant?: 'default' | 'secondary' | 'destructive' | 'success' | 'outline' | 'ghost'; asChild?: boolean; children?: React.ReactNode; className?: string",
-    "Card": "children?: React.ReactNode; className?: string",
+    "Button": "variant?: 'default' | 'outline' | 'secondary' | 'ghost' | 'destructive' | 'link'; size?: 'default' | 'xs' | 'sm' | 'lg' | 'icon' | 'icon-xs' | 'icon-sm' | 'icon-lg'; asChild?: boolean; disabled?: boolean; children?: React.ReactNode; className?: string",
+    "Badge": "variant?: 'default' | 'secondary' | 'destructive' | 'success' | 'outline' | 'ghost' | 'link'; asChild?: boolean; children?: React.ReactNode; className?: string",
+    "Card": "size?: 'default' | 'sm'; children?: React.ReactNode; className?: string",
     "PointsBadge": "name: string; total: number; size?: 'sm' | 'default' | 'lg'; badgeUrl?: string | null; icon?: React.ComponentType<{ className?: string }>; formatValue?: (value: number) => string; className?: string",
     "StreakBadge": "length?: number; frequency?: 'daily' | 'weekly' | 'monthly'; subtitle?: string; icon?: React.ReactNode; size?: 'sm' | 'default' | 'lg'; className?: string",
     "StreakCalendar": "streak: Array<{ periodStart: string; periodEnd: string; usedFreeze?: boolean }>; view?: 'week' | 'month' | 'year'; month?: Date; className?: string",

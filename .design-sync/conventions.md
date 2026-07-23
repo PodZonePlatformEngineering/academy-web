@@ -2,8 +2,13 @@
 
 React components from the live academy SPA (`academy-web`). No provider or wrapper is
 required: every component renders standalone. Load `styles.css` (it carries the tokens,
-the Inter Variable font, and all component CSS); dark mode = add the `dark` class to any
+the brand fonts, and all component CSS); dark mode = add the `dark` class to any
 ancestor element.
+
+Three variable families ship with the bundle — use them via their tokens, never by
+name: `--font-body` / `--font-sans` (Plus Jakarta Sans Variable — UI and body text),
+`--font-display` (Bricolage Grotesque Variable — headings; `.font-heading`), and
+`--font-mono` / `--font-code` (JetBrains Mono Variable — code).
 
 ## Styling idiom — Tailwind v4, compiled closure
 
@@ -25,7 +30,9 @@ NOT resolve. For your own layout glue:
 
 ## Component vocabulary
 
-- **Primitives**: `Button` (6 variants, 6 sizes), `Badge` (5 variants), `Card` +
+- **Primitives**: `Button` (6 variants; 8 sizes — `default`/`xs`/`sm`/`lg` plus the
+  square `icon`/`icon-xs`/`icon-sm`/`icon-lg`), `Badge` (7 variants), `Card`
+  (`size="sm"` tightens `--card-spacing`) +
   `CardHeader`/`CardTitle`/`CardDescription`/`CardContent`/`CardFooter`/`CardAction`.
 - **Gamification (Trophy kit)**: `PointsBadge` (XP counter), `StreakBadge`,
   `StreakCalendar` (month view; week view is time-anchored — avoid in static designs),
