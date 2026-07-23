@@ -6,6 +6,7 @@
 import { Link } from 'react-router-dom'
 import { Avatar } from '@/components/AppNav'
 import KeyVault from '@/components/KeyVault'
+import TrainingRepoCard from '@/components/TrainingRepoCard'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import {
@@ -116,6 +117,11 @@ export default function Home() {
           </CardContent>
         </Card>
       )}
+
+      {/* Opt-in, GitHub-gated training-repo self-service (T-077, subsumes
+          T-062). Self-gating: renders nothing for a non-GitHub user with no
+          repo, or in a demo build. */}
+      <TrainingRepoCard />
 
       <section className="space-y-3">
         <h2 className="text-lg font-semibold">Config</h2>

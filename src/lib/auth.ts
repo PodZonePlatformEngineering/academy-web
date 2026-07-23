@@ -91,6 +91,84 @@ export async function getAccessToken(): Promise<string | null> {
   return accessToken
 }
 
+// --- GitHub connected account (T-077) --------------------------------------
+//
+// "Is GitHub connected? + what handle" is answered ONLY here, client-side via
+// the Stack SDK — the DB never carries it (the login provider is empty in
+// neon_auth.users_sync.raw_json.oauth_providers even for OAuth logins; design
+// §3.1 / Q-1). This is the gate for the Home "request a training repo" control
+// and the source of the handle the request stores.
+
+/** A GitHub identity connected to the signed-in Stack user (§3.1). */
+export interface GithubConnection {
+  /** A GitHub account is linked to this identity — the Home gate. */
+  connected: boolean
+  /** The GitHub username, when resolvable via the account token; else null. */
+  login: string | null
+  /** The stable GitHub numeric account id, when available. */
+  accountId: string | null
+}
+
+const NO_GITHUB: GithubConnection = { connected: false, login: null, accountId: null }
+
+/**
+ * Resolve the signed-in user's GitHub connected account via the Stack SDK
+ * (`getConnectedAccount('github')`, §3.1 / Q-1).
+ *
+ * Kept OFF getCurrentUser()/the auth-resolve path deliberately: it costs up to
+ * two extra network round-trips (Stack account → a GitHub /user call for the
+ * handle) that only Home needs, so folding it into the universal identity fetch
+ * would delay every page's first render. Home calls it on mount instead. Always
+ * resolves — never throws: a missing account, a revoked token, or a GitHub
+ * hiccup degrades to connected:false / login:null rather than breaking Home.
+ */
+export async function getGithubConnection(): Promise<GithubConnection> {
+  if (!authConfigured) return NO_GITHUB
+  try {
+    const user = await stackApp().getUser()
+    if (!user) return NO_GITHUB
+    // Primary: a connected GitHub account (the design's named API).
+    const conn = await user.getConnectedAccount('github', { or: 'return-null' })
+    if (conn) {
+      const accountId = conn.providerAccountId ?? null
+      let login: string | null = null
+      try {
+        const { accessToken } = await conn.getAccessToken()
+        login = await githubLoginFromToken(accessToken)
+      } catch {
+        // token/scopes not available — still connected, handle stays unknown
+      }
+      return { connected: true, login, accountId }
+    }
+    // Fallback: a GitHub provider linked for sign-in only (some Stack configs
+    // don't surface sign-in providers as connected accounts). Establishes the
+    // gate; the handle stays unknown until a token is grantable.
+    try {
+      const providers = await user.listOAuthProviders()
+      const gh = providers.find((p) => p.type === 'github' || p.id === 'github')
+      if (gh) return { connected: true, login: null, accountId: gh.accountId ?? null }
+    } catch {
+      // ignore — fall through to not-connected
+    }
+    return NO_GITHUB
+  } catch {
+    return NO_GITHUB
+  }
+}
+
+/** The GitHub username for an OAuth access token, via the public /user endpoint. */
+async function githubLoginFromToken(accessToken: string): Promise<string | null> {
+  const res = await fetch('https://api.github.com/user', {
+    headers: {
+      Authorization: `Bearer ${accessToken}`,
+      Accept: 'application/vnd.github+json',
+    },
+  })
+  if (!res.ok) return null
+  const body = (await res.json()) as { login?: string }
+  return body.login ?? null
+}
+
 export async function signIn(provider: 'google' | 'github'): Promise<void> {
   await stackApp().signInWithOAuth(provider)
 }
