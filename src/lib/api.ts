@@ -363,6 +363,62 @@ export async function updateTimezone(traineeId: number, timezone: string): Promi
   await patch(`/trainee?id=eq.${traineeId}`, { timezone })
 }
 
+// --- Training-repo self-service (T-077, admin migration 029) ----------------
+//
+// The git_repo state machine is the contract with the code-only mint+transfer
+// backend (academy-gui, task 3). The frontend owns ONLY the `requested`
+// transition — via the self-scoped request_training_repo RPC; the backend owns
+// building → created → transfer_pending → ready / failed. The gate and the
+// GitHub handle come from the Stack SDK client-side (auth.getGithubConnection),
+// never the DB — only the flag + handle are stored here.
+
+export type RepoStatus =
+  | 'requested'
+  | 'building'
+  | 'created'
+  | 'transfer_pending'
+  | 'ready'
+  | 'failed'
+
+export interface RepoState {
+  github_login: string | null
+  repo_url: string | null
+  repo_status: RepoStatus | null
+  repo_requested_at: string | null
+  repo_updated_at: string | null
+}
+
+/** The caller's own git_repo state (RLS self-gates); null signed out / demo. */
+export async function fetchRepoState(): Promise<RepoState | null> {
+  if (demoMode) return null
+  try {
+    const rows = await get<RepoState[]>(
+      '/trainee?select=github_login,repo_url,repo_status,repo_requested_at,repo_updated_at',
+    )
+    return rows[0] ?? null
+  } catch {
+    // signed-out / anchorless callers get a 401 — render the control's default
+    return null
+  }
+}
+
+/**
+ * Set the caller's own git_repo state to `requested` and store the captured
+ * GitHub handle. Self-scoped SECURITY DEFINER RPC (029): acts only for the
+ * caller's auth.user_id(), writes only the request, and only from a resting
+ * state — so a second click while a build is in flight is refused server-side.
+ * Returns the fresh git_repo row.
+ */
+export async function requestTrainingRepo(
+  githubLogin: string,
+  githubAccountId: string | null,
+): Promise<RepoState> {
+  return post<RepoState>('/rpc/request_training_repo', {
+    p_github_login: githubLogin,
+    p_github_account_id: githubAccountId,
+  })
+}
+
 // --- Self-service onboarding (T-073, admin migration 027) ------------------
 //
 // One SECURITY DEFINER RPC covers both linking a pre-provisioned trainee to a
