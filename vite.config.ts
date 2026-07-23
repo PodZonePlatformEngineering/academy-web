@@ -26,17 +26,40 @@ const onCloudflarePages = process.env.CF_PAGES === '1'
 // resolves the app at `base`. Root ('/') stays flat; a subpath nests under it.
 const cfOutDir = base === '/' ? 'dist' : 'dist' + base.replace(/\/$/, '')
 
+// Shared across both build targets.
+const alias = { '@': path.resolve(__dirname, './src') }
+
+// The landing/portal page (T-080) is a SECOND build target in this one repo,
+// selected by VITE_TARGET=portal. It reuses the SPA's component kit, tokens and
+// auth layer (via the '@' alias) but ships as its own self-contained page —
+// served at the podzone.academy APEX (base '/'), a separate CF Pages project.
+//
+// Mechanism: point Vite's `root` at src/portal/, whose index.html is the entry.
+// Vite emits it as dist/index.html at the root, so no rename is needed and CF
+// serves it at '/'. outDir/publicDir are pinned to the repo (absolute) since
+// they'd otherwise resolve under the portal root. The main app build is left
+// completely untouched — an unset VITE_TARGET reproduces today's behaviour.
+const portalConfig = defineConfig({
+  base: '/',
+  root: path.resolve(__dirname, 'src/portal'),
+  publicDir: path.resolve(__dirname, 'public'),
+  build: {
+    outDir: path.resolve(__dirname, 'dist'),
+    emptyOutDir: true,
+  },
+  plugins: [react(), tailwindcss()],
+  resolve: { alias },
+})
+
 // https://vite.dev/config/
-export default defineConfig({
+const appConfig = defineConfig({
   // Default Project-Pages URL: https://podzoneplatformengineering.github.io/academy-web/
   base,
   build: {
     outDir: onCloudflarePages ? cfOutDir : 'dist',
   },
   plugins: [react(), tailwindcss()],
-  resolve: {
-    alias: {
-      '@': path.resolve(__dirname, './src'),
-    },
-  },
+  resolve: { alias },
 })
+
+export default process.env.VITE_TARGET === 'portal' ? portalConfig : appConfig
