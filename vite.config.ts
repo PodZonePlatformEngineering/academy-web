@@ -3,6 +3,8 @@ import { defineConfig } from 'vite'
 import react from '@vitejs/plugin-react'
 import tailwindcss from '@tailwindcss/vite'
 
+import { cloudflare } from "@cloudflare/vite-plugin";
+
 // The SPA lives under the /academy-web/ base path on every host (see base
 // below) because the Neon Auth oauthCallback + redirect URLs are BASE_URL-
 // relative (src/lib/auth.ts) — moving to root silently breaks sign-in. The
@@ -23,7 +25,7 @@ export default defineConfig({
   build: {
     outDir: onCloudflarePages ? 'dist/academy-web' : 'dist',
   },
-  plugins: [react(), tailwindcss()],
+  plugins: [react(), tailwindcss(), cloudflare()],
   resolve: {
     alias: {
       '@': path.resolve(__dirname, './src'),
