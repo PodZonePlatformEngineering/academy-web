@@ -169,6 +169,28 @@ async function githubLoginFromToken(accessToken: string): Promise<string | null>
   return body.login ?? null
 }
 
+// --- Admin authorization (T-080 portal) ------------------------------------
+//
+// The portal's Academy Admin launch card renders only for administrators. The
+// authorization is the shared Stack project-level `admin` permission — the same
+// grant the forthcoming academy-gui admin app (T-077 task 3) gates on, not a
+// demo toggle. `hasPermission(id)` (no scope arg) is a project permission on the
+// current user. It degrades to false on any error or when the permission isn't
+// configured yet, so the card simply stays hidden until an admin grant exists —
+// the correct forward-looking default (the Admin destination isn't deployed).
+
+/** Whether the signed-in user holds the shared `admin` project permission. */
+export async function isAdmin(): Promise<boolean> {
+  if (!authConfigured) return false
+  try {
+    const user = await stackApp().getUser()
+    if (!user) return false
+    return await user.hasPermission('admin')
+  } catch {
+    return false
+  }
+}
+
 export async function signIn(provider: 'google' | 'github'): Promise<void> {
   await stackApp().signInWithOAuth(provider)
 }
