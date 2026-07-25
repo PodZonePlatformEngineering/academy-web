@@ -1,9 +1,16 @@
-// Neon Auth (Stack) client — headless wiring for the P1.2 sign-in round-trip,
-// extended (T-082) with the shared config the prebuilt sign-in page builds its
-// own @stackframe/react app instance from.
+// Neon Auth (Stack) client — the ONE StackClientApp for the whole app (T-084).
 //
-// The SDK is used without StackProvider/StackHandler on this (headless) app
-// instance on purpose: the SPA is hash-routed on a Pages subpath, so the
+// T-082 introduced a cross-instance seam: the prebuilt <SignIn/> page built its
+// own @stackframe/react instance while these helpers ran a separate
+// @stackframe/js one. The two disagreed about the session after an OAuth
+// round-trip — react saw the user, headless resolved null — so the signed-in
+// redirect never fired and the app fell back to the signed-out Landing (see
+// academy-web#34). T-084 collapses them: a single @stackframe/react
+// StackClientApp is built here and both the headless helpers below AND the
+// prebuilt <SignIn/> page (src/pages/SignIn.tsx, via StackProvider) share it.
+//
+// The helpers below still use the SDK headlessly (no StackProvider/StackHandler
+// around them) on purpose: the SPA is hash-routed on a Pages subpath, so the
 // prebuilt handler routes would sit awkwardly across the fragment boundary.
 // The return point must be configured explicitly — the SDK defaults
 // urls.oauthCallback to {origin}/handler/oauth-callback (the StackHandler
@@ -18,7 +25,7 @@
 //   VITE_STACK_PROJECT_ID              — Neon Auth project id
 //   VITE_STACK_PUBLISHABLE_CLIENT_KEY  — Neon Auth publishable client key
 
-import { StackClientApp } from '@stackframe/js'
+import { StackClientApp } from '@stackframe/react'
 
 const projectId: string | undefined = import.meta.env.VITE_STACK_PROJECT_ID
 const publishableClientKey: string | undefined = import.meta.env
@@ -33,12 +40,10 @@ export interface AuthUser {
   profileImageUrl: string | null
 }
 
-// The one true config, shared by every StackClientApp instance in this app —
-// this headless one AND the @stackframe/react one the prebuilt <SignIn/> page
-// builds (src/pages/SignIn.tsx). Do not fork these values: the relative URLs
-// below are what keeps the GH-Pages subpath instance working (see the module
-// note) while root instances (www, vibe) just work, and re-deriving them
-// separately in two places is exactly how that would silently drift.
+// The one true config for the single StackClientApp built below (shared with
+// the prebuilt <SignIn/> page via StackProvider). The relative URLs below are
+// what keeps the GH-Pages subpath instance working (see the module note) while
+// root instances (www, vibe) just work.
 export const stackConfig = {
   projectId: projectId!,
   publishableClientKey: publishableClientKey!,
@@ -62,7 +67,13 @@ export const stackConfig = {
 
 let app: StackClientApp<true, string> | null = null
 
-function stackApp(): StackClientApp<true, string> {
+/**
+ * The single shared StackClientApp. Lazily constructed once and reused by every
+ * caller — the headless helpers below and the prebuilt <SignIn/> page's
+ * StackProvider (src/pages/SignIn.tsx). Never build a second instance: that is
+ * the T-084 cross-instance seam. Only call when `authConfigured` is true.
+ */
+export function stackApp(): StackClientApp<true, string> {
   if (!app) {
     app = new StackClientApp(stackConfig)
   }
