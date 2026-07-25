@@ -6,7 +6,7 @@ import { Button } from '@/components/ui/button'
 import { Card, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { recordCurriculumUsed } from '@/lib/activeCurriculum'
 import { demoMode } from '@/lib/api'
-import { authConfigured, signIn, signOut } from '@/lib/auth'
+import { authConfigured, signOut } from '@/lib/auth'
 import { AuthStateProvider, useAuthState } from '@/lib/auth-state'
 import { routeDecision } from '@/lib/routing'
 import Catalogue from '@/pages/Catalogue'
@@ -15,6 +15,7 @@ import Home from '@/pages/Home'
 import Landing from '@/pages/Landing'
 import ProfileManagement from '@/pages/ProfileManagement'
 import Scoreboard from '@/pages/Scoreboard'
+import SignIn from '@/pages/SignIn'
 import Tutor from '@/pages/Tutor'
 
 function AuthControls() {
@@ -38,14 +39,9 @@ function AuthControls() {
     )
   }
   return (
-    <div className="flex items-center gap-2">
-      <Button variant="outline" size="sm" onClick={() => signIn('google')}>
-        Sign in with Google
-      </Button>
-      <Button variant="outline" size="sm" onClick={() => signIn('github')}>
-        Sign in with GitHub
-      </Button>
-    </div>
+    <Button variant="outline" size="sm" asChild>
+      <Link to="/sign-in">Sign in</Link>
+    </Button>
   )
 }
 
@@ -118,6 +114,7 @@ export default function App() {
               no Route entries — RouteGate rewrites them before matching. */}
           <Routes>
             <Route path="/" element={<Landing />} />
+            <Route path="/sign-in" element={<SignIn />} />
             <Route
               path="/tutor"
               element={
