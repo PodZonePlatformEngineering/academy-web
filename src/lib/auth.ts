@@ -1,14 +1,16 @@
-// Neon Auth (Stack) client — headless wiring for the P1.2 sign-in round-trip.
+// Neon Auth (Stack) client — headless wiring for the P1.2 sign-in round-trip,
+// extended (T-082) with the shared config the prebuilt sign-in page builds its
+// own @stackframe/react app instance from.
 //
-// The SDK is used without StackProvider/StackHandler on purpose: the SPA is
-// hash-routed on a Pages subpath, so the prebuilt handler routes would sit
-// awkwardly across the fragment boundary. The return point must be configured
-// explicitly — the SDK defaults urls.oauthCallback to {origin}/handler/
-// oauth-callback (the StackHandler route), which does not exist here and 404s
-// on Pages. We point it at the app root (Vite BASE_URL: /academy-web/ in the
-// Pages build, / in dev); the provider bounces back with ?code=… in the query
-// (before the hash, invisible to HashRouter), and completeOAuthCallback()
-// exchanges it on mount.
+// The SDK is used without StackProvider/StackHandler on this (headless) app
+// instance on purpose: the SPA is hash-routed on a Pages subpath, so the
+// prebuilt handler routes would sit awkwardly across the fragment boundary.
+// The return point must be configured explicitly — the SDK defaults
+// urls.oauthCallback to {origin}/handler/oauth-callback (the StackHandler
+// route), which does not exist here and 404s on Pages. We point it at the app
+// root (Vite BASE_URL: /academy-web/ in the Pages build, / in dev); the
+// provider bounces back with ?code=… in the query (before the hash, invisible
+// to HashRouter), and completeOAuthCallback() exchanges it on mount.
 //
 // Configuration is build-time env — both values are public-by-design client
 // identifiers (architecture v2 §5: no credentials in the bundle; RLS is the
@@ -31,30 +33,38 @@ export interface AuthUser {
   profileImageUrl: string | null
 }
 
+// The one true config, shared by every StackClientApp instance in this app —
+// this headless one AND the @stackframe/react one the prebuilt <SignIn/> page
+// builds (src/pages/SignIn.tsx). Do not fork these values: the relative URLs
+// below are what keeps the GH-Pages subpath instance working (see the module
+// note) while root instances (www, vibe) just work, and re-deriving them
+// separately in two places is exactly how that would silently drift.
+export const stackConfig = {
+  projectId: projectId!,
+  publishableClientKey: publishableClientKey!,
+  tokenStore: 'cookie' as const,
+  urls: {
+    // Must be RELATIVE — the SDK asserts it (HexclaveAssertionError otherwise,
+    // which silently kills every sign-in click). BASE_URL is /academy-web/ on
+    // Pages, / in dev; the SDK resolves it against the current origin.
+    oauthCallback: import.meta.env.BASE_URL,
+    // Post-auth redirect targets and the error page default to origin-root
+    // /handler paths that don't exist on a Pages subpath deployment — after
+    // a successful code exchange the SDK navigates to afterSignIn (observed
+    // 404 at the origin root). Point everything at the app root.
+    home: import.meta.env.BASE_URL,
+    afterSignIn: import.meta.env.BASE_URL,
+    afterSignUp: import.meta.env.BASE_URL,
+    afterSignOut: import.meta.env.BASE_URL,
+    error: import.meta.env.BASE_URL,
+  },
+}
+
 let app: StackClientApp<true, string> | null = null
 
 function stackApp(): StackClientApp<true, string> {
   if (!app) {
-    app = new StackClientApp({
-      projectId: projectId!,
-      publishableClientKey: publishableClientKey!,
-      tokenStore: 'cookie',
-      urls: {
-        // Must be RELATIVE — the SDK asserts it (HexclaveAssertionError otherwise,
-        // which silently kills every sign-in click). BASE_URL is /academy-web/ on
-        // Pages, / in dev; the SDK resolves it against the current origin.
-        oauthCallback: import.meta.env.BASE_URL,
-        // Post-auth redirect targets and the error page default to origin-root
-        // /handler paths that don't exist on a Pages subpath deployment — after
-        // a successful code exchange the SDK navigates to afterSignIn (observed
-        // 404 at the origin root). Point everything at the app root.
-        home: import.meta.env.BASE_URL,
-        afterSignIn: import.meta.env.BASE_URL,
-        afterSignUp: import.meta.env.BASE_URL,
-        afterSignOut: import.meta.env.BASE_URL,
-        error: import.meta.env.BASE_URL,
-      },
-    })
+    app = new StackClientApp(stackConfig)
   }
   return app
 }
@@ -189,10 +199,6 @@ export async function isAdmin(): Promise<boolean> {
   } catch {
     return false
   }
-}
-
-export async function signIn(provider: 'google' | 'github'): Promise<void> {
-  await stackApp().signInWithOAuth(provider)
 }
 
 export async function signOut(): Promise<void> {

@@ -1,20 +1,21 @@
-// Landing / portal page (PROJ-011/T-080) — the front door for the whole PodZone
-// Academy suite, served at the podzone.academy APEX as its own build target
-// (VITE_TARGET=portal, base '/'). Recreated from the Claude Design reference
-// (academy-web#29, templates/landing-portal/) on academy-web's real primitives
-// (Button/Card/Badge + the token layer), NOT lifted from the design's raw HTML.
+// Landing / portal page (PROJ-011/T-080, reworked T-082) — the front door for
+// the whole PodZone Academy suite, served at the podzone.academy APEX as its
+// own build target (VITE_TARGET=portal, base '/').
 //
-// Two states on one page (§1): signed-out marketing hero, signed-in launcher.
-// Auth is the only dynamic wiring (§6) — it reuses src/lib/auth.ts (the SPA's
-// Neon Auth layer): signed-in/out gates the whole page, and the shared Stack
-// `admin` permission gates the Academy Admin card. Everything else is static.
+// T-082 (operator 2026-07-25): the portal logs nobody in. Cross-origin auth
+// state never travelled cleanly between the apex and the sibling apps (the
+// training app would pick a session up, the admin app would re-prompt), so
+// the portal is now fully static — no @stackframe/* import, no auth network
+// call on load. Each destination owns its own sign-in: Training and Academy
+// Admin both present a single "Sign in" button of their own. Everything here
+// is a plain link out. The Academy Admin card is always visible (its "Admin
+// only" label is informational, not a gate — academy-gui's own isAdmin()
+// check is the real gate now that the apex has no session to consult).
 //
-// The launcher links OUT to the sibling apps on their own domains — Training to
-// www.podzone.academy (the academy-web SPA), Academy Admin to
-// admin.podzone.academy (the forthcoming academy-gui, admins only). Dark mode
-// is in scope (operator 2026-07-23): the toggle drives the real `.dark` idiom.
+// Dark mode is unrelated to auth and stays in scope (operator 2026-07-23):
+// the toggle drives the real `.dark` idiom.
 
-import { useEffect, useState } from 'react'
+import { useState } from 'react'
 import {
   ArrowRight,
   BookOpen,
@@ -25,23 +26,12 @@ import {
   GraduationCap,
   Moon,
   ShieldCheck,
-  Sparkles,
   Sun,
   Users,
 } from 'lucide-react'
-import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Card } from '@/components/ui/card'
 import { cn } from '@/lib/utils'
-import {
-  authConfigured,
-  getCurrentUser,
-  isAdmin,
-  completeOAuthCallback,
-  signIn,
-  signOut,
-  type AuthUser,
-} from '@/lib/auth'
 import grainUrl from '@/assets/grain.svg'
 import markUrl from '@/assets/podzone-cloud-mark.png'
 import questCoatOfArmsUrl from '@/assets/quest-coat-of-arms.svg'
@@ -78,26 +68,7 @@ function ThemeToggle({ dark, onToggle }: { dark: boolean; onToggle: () => void }
   )
 }
 
-interface Session {
-  user: AuthUser | null
-  admin: boolean
-  ready: boolean
-}
-
-function Nav({
-  session,
-  dark,
-  onToggleDark,
-  onSignOut,
-}: {
-  session: Session
-  dark: boolean
-  onToggleDark: () => void
-  onSignOut: () => void
-}) {
-  const { user, admin, ready } = session
-  const initial =
-    (user?.displayName ?? user?.email ?? '?').trim().charAt(0).toUpperCase() || '?'
+function Nav({ dark, onToggleDark }: { dark: boolean; onToggleDark: () => void }) {
   return (
     <nav className="mx-auto flex max-w-6xl items-center gap-4 px-6 py-5">
       <div className="flex items-center gap-2.5">
@@ -111,127 +82,145 @@ function Nav({
       </div>
       <div className="ml-auto flex items-center gap-2.5">
         <ThemeToggle dark={dark} onToggle={onToggleDark} />
-        {authConfigured && ready && !user && (
-          <Button className="px-4" onClick={() => signIn('google')}>
-            Sign in
-          </Button>
-        )}
-        {ready && user && (
-          <div className="flex items-center gap-2.5">
-            <span className="flex size-8 items-center justify-center rounded-full bg-primary text-[13px] font-bold text-primary-foreground">
-              {initial}
-            </span>
-            <span className="hidden text-sm font-semibold text-(--ink-700) sm:inline">
-              {admin ? 'Admin' : 'Trainee'}
-            </span>
-            <Button variant="outline" size="sm" onClick={onSignOut}>
-              Sign out
-            </Button>
-          </div>
-        )}
       </div>
     </nav>
   )
 }
 
 /* ------------------------------------------------------------------ *
- * Signed-out: marketing                                              *
+ * Launcher — the front door itself, always visible                   *
  * ------------------------------------------------------------------ */
 
-/** A lightweight, on-brand stand-in for the design's hero <image-slot>
- *  ("product screenshot: tutor mid-conversation"). No real screenshot ships in
- *  the design zip and the brief asks to keep the front door light, so this is a
- *  clean token-built browser vignette — drop a real product screenshot in when
- *  one exists. */
-function HeroPreview() {
+function LaunchCard({
+  eyebrow,
+  title,
+  body,
+  cta,
+  href,
+  icon: Icon,
+  primary = false,
+  disabled = false,
+}: {
+  eyebrow: string
+  title: string
+  body: string
+  cta: string
+  href?: string
+  icon: React.ComponentType<{ className?: string }>
+  primary?: boolean
+  disabled?: boolean
+}) {
+  const inner = (
+    <>
+      <div className="flex items-center gap-2.5">
+        <span
+          className={cn(
+            'flex size-10 items-center justify-center rounded-(--r-lg)',
+            primary
+              ? 'bg-primary-foreground/15 text-primary-foreground'
+              : 'bg-(--clay-50) text-primary',
+          )}
+        >
+          <Icon className="size-5" />
+        </span>
+        <p
+          className={cn(
+            'micro',
+            primary ? 'text-primary-foreground/90' : 'text-primary',
+          )}
+        >
+          {eyebrow}
+        </p>
+      </div>
+      <h3 className="mt-4 font-heading text-2xl font-semibold">{title}</h3>
+      <p
+        className={cn(
+          'mt-2 flex-1 text-[15px] leading-relaxed',
+          primary ? 'text-primary-foreground/85' : 'text-(--ink-600)',
+        )}
+      >
+        {body}
+      </p>
+      <div className="mt-5">
+        {disabled ? (
+          <Button variant="secondary" disabled>
+            {cta}
+          </Button>
+        ) : primary ? (
+          <Button variant="secondary" className="bg-background text-primary" asChild>
+            <a href={href}>
+              {cta} <ArrowRight />
+            </a>
+          </Button>
+        ) : (
+          <Button variant="outline" asChild>
+            <a href={href}>
+              {cta} <ArrowRight />
+            </a>
+          </Button>
+        )}
+      </div>
+    </>
+  )
   return (
-    <div className="relative mx-auto w-full max-w-[440px]">
-      <div className="overflow-hidden rounded-(--r-xl) border bg-background shadow-(--shadow-pop)">
-        <div className="flex items-center gap-1.5 border-b bg-secondary px-4 py-3">
-          <span className="size-2.5 rounded-full bg-(--clay-300)" />
-          <span className="size-2.5 rounded-full bg-(--honey-300)" />
-          <span className="size-2.5 rounded-full bg-(--sage-500)/60" />
-          <span className="ml-2 min-w-0 flex-1 truncate rounded-full bg-background px-3 py-1 text-[11px] text-muted-foreground">
-            academy.podzone — Where do you want to go?
-          </span>
-        </div>
-        <div className="grid gap-3 p-4 sm:grid-cols-2">
-          <div className="rounded-(--r-lg) bg-primary p-4 text-primary-foreground sm:col-span-2">
-            <p className="micro text-[10px] text-primary-foreground/90">Core product</p>
-            <p className="mt-1 flex items-center gap-2 font-heading text-lg font-semibold">
-              <GraduationCap className="size-5" /> Training
-            </p>
-            <p className="mt-1 text-[12px] leading-snug text-primary-foreground/85">
-              Your AI tutor, your curriculum, your pace.
-            </p>
-          </div>
-          <div className="rounded-(--r-lg) border bg-card p-4">
-            <p className="micro text-[10px] text-primary">Admin only</p>
-            <p className="mt-1 font-heading text-sm font-semibold">Academy Admin</p>
-          </div>
-          <div className="rounded-(--r-lg) border bg-card p-4 opacity-60">
-            <p className="micro text-[10px] text-primary">Coming soon</p>
-            <p className="mt-1 font-heading text-sm font-semibold">Library</p>
-          </div>
-        </div>
-      </div>
-      <div className="absolute top-8 -right-3 hidden items-center gap-2 rounded-(--r-lg) border bg-background px-3.5 py-2.5 text-sm font-semibold text-(--sage-500) shadow-(--shadow-pop) sm:flex">
-        <ShieldCheck className="size-4.5" /> Grounded in your material
-      </div>
+    <div
+      className={cn(
+        'flex flex-col rounded-(--r-xl) border p-7',
+        primary
+          ? 'border-transparent bg-primary text-primary-foreground shadow-(--shadow-pop) sm:col-span-2'
+          : 'bg-card shadow-(--shadow-soft)',
+        disabled && 'opacity-60',
+      )}
+    >
+      {inner}
     </div>
   )
 }
 
-function SignInButtons({ size }: { size?: 'lg' }) {
-  if (!authConfigured) {
-    return (
-      <Button size={size} className="px-5" asChild>
-        <a href={TRAINING_URL}>
-          Explore Training <ArrowRight />
-        </a>
-      </Button>
-    )
-  }
+function Launcher() {
   return (
-    <>
-      <Button size={size} className="px-5" onClick={() => signIn('google')}>
-        Sign in with Google <ArrowRight />
-      </Button>
-      <Button
-        size={size}
-        variant="secondary"
-        className="px-5"
-        onClick={() => signIn('github')}
-      >
-        Sign in with GitHub
-      </Button>
-    </>
-  )
-}
-
-function Hero() {
-  return (
-    <section className="mx-auto grid max-w-6xl items-center gap-12 px-6 pt-6 pb-16 lg:grid-cols-[1.1fr_1fr]">
-      <div>
-        <span className="micro inline-flex items-center gap-1.5 rounded-full border bg-secondary px-3 py-1 text-primary">
-          <Sparkles className="size-3.5" /> A general-purpose, gamified RAG suite
-        </span>
-        <h1 className="mt-4 font-heading text-5xl font-semibold tracking-[-0.02em] text-balance sm:text-6xl sm:leading-[1.03]">
-          A gamified RAG suite. Built for training —{' '}
-          <em className="text-primary italic not-italic">useful well beyond it.</em>
-        </h1>
-        <p className="mt-4 max-w-[540px] text-lg leading-relaxed text-(--ink-700)">
-          Grounded answers, real progress, and a tutor that knows your material. Sign in to
-          start, or explore what PodZone Academy can do.
-        </p>
-        <div className="mt-7 flex flex-wrap items-center gap-3">
-          <SignInButtons />
-        </div>
+    <section className="mx-auto max-w-6xl px-6 pt-10 pb-16">
+      <p className="micro text-primary">Start here</p>
+      <h1 className="mt-1.5 font-heading text-4xl font-semibold tracking-[-0.02em] sm:text-5xl">
+        Where do you want to go?
+      </h1>
+      <p className="mt-3 max-w-[560px] text-lg leading-relaxed text-(--ink-700)">
+        Pick a destination — each one handles its own sign-in.
+      </p>
+      <div className="mt-7 grid gap-5 [grid-template-columns:repeat(auto-fit,minmax(280px,1fr))]">
+        <LaunchCard
+          primary
+          icon={GraduationCap}
+          eyebrow="Core product"
+          title="Training"
+          body="Your AI tutor, your curriculum, your pace — grounded in real course material, with XP, streaks and levels that track genuine progress."
+          cta="Open Training"
+          href={TRAINING_URL}
+        />
+        <LaunchCard
+          icon={ShieldCheck}
+          eyebrow="Admin only"
+          title="Academy Admin"
+          body="Provision trainees, manage curricula and cohorts, and issue training repos — the operator console."
+          cta="Open Admin"
+          href={ADMIN_URL}
+        />
+        <LaunchCard
+          disabled
+          icon={BookOpen}
+          eyebrow="Coming soon"
+          title="Library"
+          body="A grounded knowledge library. Coming soon."
+          cta="Coming soon"
+        />
       </div>
-      <HeroPreview />
     </section>
   )
 }
+
+/* ------------------------------------------------------------------ *
+ * Supporting marketing content — static, no auth involved            *
+ * ------------------------------------------------------------------ */
 
 const AI_ROLES = [
   {
@@ -417,150 +406,22 @@ function ClosingCta() {
   return (
     <section className="px-6 py-16 text-center">
       <h2 className="mx-auto max-w-[700px] font-heading text-4xl font-semibold tracking-[-0.02em] text-balance sm:text-5xl">
-        Your first section is a sign-in away.
+        Your first section is one click away.
       </h2>
       <p className="mx-auto mt-4 max-w-[560px] text-lg leading-relaxed text-(--ink-600)">
-        Google or GitHub — row-level security finds your curricula, and the streak starts
+        Row-level security finds your curricula the moment you sign in, and the streak starts
         counting today.
       </p>
       <div className="mt-7 inline-flex flex-wrap items-center justify-center gap-3">
-        <SignInButtons size="lg" />
+        <Button size="lg" className="px-5" asChild>
+          <a href={TRAINING_URL}>
+            Open Training <ArrowRight />
+          </a>
+        </Button>
       </div>
     </section>
   )
 }
-
-/* ------------------------------------------------------------------ *
- * Signed-in: launcher                                                *
- * ------------------------------------------------------------------ */
-
-function LaunchCard({
-  eyebrow,
-  title,
-  body,
-  cta,
-  href,
-  icon: Icon,
-  primary = false,
-  disabled = false,
-}: {
-  eyebrow: string
-  title: string
-  body: string
-  cta: string
-  href?: string
-  icon: React.ComponentType<{ className?: string }>
-  primary?: boolean
-  disabled?: boolean
-}) {
-  const inner = (
-    <>
-      <div className="flex items-center gap-2.5">
-        <span
-          className={cn(
-            'flex size-10 items-center justify-center rounded-(--r-lg)',
-            primary
-              ? 'bg-primary-foreground/15 text-primary-foreground'
-              : 'bg-(--clay-50) text-primary',
-          )}
-        >
-          <Icon className="size-5" />
-        </span>
-        <p
-          className={cn(
-            'micro',
-            primary ? 'text-primary-foreground/90' : 'text-primary',
-          )}
-        >
-          {eyebrow}
-        </p>
-      </div>
-      <h3 className="mt-4 font-heading text-2xl font-semibold">{title}</h3>
-      <p
-        className={cn(
-          'mt-2 flex-1 text-[15px] leading-relaxed',
-          primary ? 'text-primary-foreground/85' : 'text-(--ink-600)',
-        )}
-      >
-        {body}
-      </p>
-      <div className="mt-5">
-        {disabled ? (
-          <Button variant="secondary" disabled>
-            {cta}
-          </Button>
-        ) : primary ? (
-          <Button variant="secondary" className="bg-background text-primary" asChild>
-            <a href={href}>
-              {cta} <ArrowRight />
-            </a>
-          </Button>
-        ) : (
-          <Button variant="outline" asChild>
-            <a href={href}>
-              {cta} <ArrowRight />
-            </a>
-          </Button>
-        )}
-      </div>
-    </>
-  )
-  return (
-    <div
-      className={cn(
-        'flex flex-col rounded-(--r-xl) border p-7',
-        primary
-          ? 'border-transparent bg-primary text-primary-foreground shadow-(--shadow-pop) sm:col-span-2'
-          : 'bg-card shadow-(--shadow-soft)',
-        disabled && 'opacity-60',
-      )}
-    >
-      {inner}
-    </div>
-  )
-}
-
-function Launcher({ admin }: { admin: boolean }) {
-  return (
-    <section className="mx-auto max-w-6xl px-6 pt-6 pb-20">
-      <p className="micro text-primary">Welcome back</p>
-      <h1 className="mt-1.5 font-heading text-4xl font-semibold tracking-[-0.02em]">
-        Where do you want to go?
-      </h1>
-      <div className="mt-7 grid gap-5 [grid-template-columns:repeat(auto-fit,minmax(280px,1fr))]">
-        <LaunchCard
-          primary
-          icon={GraduationCap}
-          eyebrow="Core product"
-          title="Training"
-          body="Your AI tutor, your curriculum, your pace — grounded in real course material, with XP, streaks and levels that track genuine progress."
-          cta="Open Training"
-          href={TRAINING_URL}
-        />
-        {admin && (
-          <LaunchCard
-            icon={ShieldCheck}
-            eyebrow="Admin only"
-            title="Academy Admin"
-            body="Provision trainees, manage curricula and cohorts, and issue training repos — the operator console."
-            cta="Open Admin"
-            href={ADMIN_URL}
-          />
-        )}
-        <LaunchCard
-          disabled
-          icon={BookOpen}
-          eyebrow="Coming soon"
-          title="Library"
-          body="A grounded knowledge library. Coming soon."
-          cta="Coming soon"
-        />
-      </div>
-    </section>
-  )
-}
-
-/* ------------------------------------------------------------------ */
 
 function Footer() {
   return (
@@ -577,31 +438,7 @@ function Footer() {
 }
 
 export default function Portal() {
-  const [session, setSession] = useState<Session>({
-    user: null,
-    admin: false,
-    ready: false,
-  })
   const [dark, setDark] = useState(initialDark)
-
-  useEffect(() => {
-    let cancelled = false
-    // A sign-in started from the portal returns here (oauthCallback = BASE_URL =
-    // '/'); complete the exchange, then resolve identity + admin authorization.
-    completeOAuthCallback()
-      .then(getCurrentUser)
-      .then(async (user) => {
-        if (cancelled) return
-        const admin = user ? await isAdmin() : false
-        if (!cancelled) setSession({ user, admin, ready: true })
-      })
-      .catch(() => {
-        if (!cancelled) setSession({ user: null, admin: false, ready: true })
-      })
-    return () => {
-      cancelled = true
-    }
-  }, [])
 
   function toggleDark() {
     setDark((d) => {
@@ -611,37 +448,15 @@ export default function Portal() {
     })
   }
 
-  const { user, admin, ready } = session
-
   return (
     <div className="min-h-screen bg-background text-foreground">
-      <Nav
-        session={session}
-        dark={dark}
-        onToggleDark={toggleDark}
-        onSignOut={() =>
-          signOut().then(() => setSession({ user: null, admin: false, ready: true }))
-        }
-      />
-      {/* While auth resolves, hold the fold rather than flash marketing→launcher. */}
-      {!ready ? (
-        <div className="flex min-h-[60vh] items-center justify-center">
-          <Badge variant="secondary" className="animate-pulse">
-            Loading…
-          </Badge>
-        </div>
-      ) : user ? (
-        <Launcher admin={admin} />
-      ) : (
-        <>
-          <Hero />
-          <TwoRoles />
-          <DeliverBand />
-          <Solutions />
-          <WhiteLabel />
-          <ClosingCta />
-        </>
-      )}
+      <Nav dark={dark} onToggleDark={toggleDark} />
+      <Launcher />
+      <TwoRoles />
+      <DeliverBand />
+      <Solutions />
+      <WhiteLabel />
+      <ClosingCta />
       <Footer />
     </div>
   )

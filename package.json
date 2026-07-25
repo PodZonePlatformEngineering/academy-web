@@ -23,6 +23,7 @@
     "@huggingface/transformers": "^4.2.0",
     "@radix-ui/react-tooltip": "^1.2.12",
     "@stackframe/js": "^2.8.108",
+    "@stackframe/react": "^2.8.108",
     "@tailwindcss/typography": "^0.5.20",
     "@tailwindcss/vite": "^4.3.3",
     "class-variance-authority": "^0.7.1",

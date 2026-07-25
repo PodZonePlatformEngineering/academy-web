@@ -22,7 +22,7 @@ import {
 import { Button } from '@/components/ui/button'
 import { ChatBubble } from '@/components/ui/chat-bubble'
 import { LessonCard } from '@/components/ui/lesson-card'
-import { authConfigured, signIn } from '@/lib/auth'
+import { authConfigured } from '@/lib/auth'
 import grainUrl from '@/assets/grain.svg'
 import markUrl from '@/assets/podzone-cloud-mark.png'
 import questCoatOfArmsUrl from '@/assets/quest-coat-of-arms.svg'
@@ -146,8 +146,10 @@ function Hero() {
         </p>
         <div className="mt-7 flex flex-wrap items-center gap-3">
           {authConfigured ? (
-            <Button className="px-4" onClick={() => signIn('google')}>
-              Sign in with Google <ArrowRight />
+            <Button className="px-4" asChild>
+              <Link to="/sign-in">
+                Sign in <ArrowRight />
+              </Link>
             </Button>
           ) : (
             <Button className="px-4" asChild>
@@ -244,7 +246,7 @@ const HOW_STEPS = [
   {
     n: '01',
     title: 'Sign in',
-    body: 'Google or GitHub, through Neon Auth. No new password to forget by week two.',
+    body: 'Google, GitHub, Microsoft, passkey, or email — whatever Neon Auth has on offer.',
   },
   {
     n: '02',
@@ -363,24 +365,16 @@ function ClosingCta() {
         Your first section is a sign-in away.
       </h2>
       <p className="mx-auto mt-4 max-w-[560px] text-lg leading-relaxed text-(--ink-600)">
-        Google or GitHub — row-level security finds your curricula, and the streak
+        Row-level security finds your curricula the moment you sign in, and the streak
         starts counting today.
       </p>
       <div className="mt-7 inline-flex flex-wrap items-center justify-center gap-3">
         {authConfigured ? (
-          <>
-            <Button size="lg" className="px-5 text-[15px]" onClick={() => signIn('google')}>
-              Sign in with Google <ArrowRight />
-            </Button>
-            <Button
-              size="lg"
-              variant="secondary"
-              className="px-5 text-[15px]"
-              onClick={() => signIn('github')}
-            >
-              Sign in with GitHub
-            </Button>
-          </>
+          <Button size="lg" className="px-5 text-[15px]" asChild>
+            <Link to="/sign-in">
+              Sign in <ArrowRight />
+            </Link>
+          </Button>
         ) : (
           <Button size="lg" className="px-5 text-[15px]" asChild>
             <Link to="/catalogue">
