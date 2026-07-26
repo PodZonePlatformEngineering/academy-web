@@ -6,11 +6,11 @@
 // prebuilt <SignIn/> — that is the point of this change, so it is never
 // hard-coded here.
 //
-// This needs its own StackClientApp instance — @stackframe/react's own class,
-// built from the SAME stackConfig src/lib/auth.ts's headless app uses (not a
-// forked copy: see that module's note on why oauthCallback/home/afterSignIn/
-// afterSignUp/afterSignOut/error must stay BASE_URL-relative, which is what
-// keeps the GH-Pages subpath instance working while root instances just work).
+// This uses the ONE shared StackClientApp from src/lib/auth.ts (T-084) — the
+// same @stackframe/react instance the headless helpers run against, passed to
+// StackProvider here. It must NOT build its own: two instances disagree about
+// the session after an OAuth round-trip, which is exactly the seam T-084 closed
+// (see auth.ts's module note; academy-web#34).
 //
 // No custom `theme` is passed to StackTheme: its default theme already tracks
 // this app's light/dark state on its own (it watches <html>'s class attribute
@@ -23,10 +23,10 @@
 // same principle applies here.
 
 import { Link } from 'react-router-dom'
-import { SignIn as PrebuiltSignIn, StackClientApp, StackProvider, StackTheme } from '@stackframe/react'
-import { authConfigured, stackConfig } from '@/lib/auth'
+import { SignIn as PrebuiltSignIn, StackProvider, StackTheme } from '@stackframe/react'
+import { authConfigured, stackApp } from '@/lib/auth'
 
-const app = authConfigured ? new StackClientApp(stackConfig) : null
+const app = authConfigured ? stackApp() : null
 
 export default function SignIn() {
   if (!app) {

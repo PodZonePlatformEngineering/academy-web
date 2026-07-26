@@ -59,11 +59,18 @@ export function AuthStateProvider({ children }: { children: ReactNode }) {
               setProvision(result.status === 'needs_profile' ? 'needs-profile' : 'provisioned')
             }
           })
-          .catch(() => {
+          .catch((err) => {
+            // Self-correcting fallback (see above) — but never silent: a broken
+            // provision RPC otherwise hides behind a plausible needs-profile.
+            console.error('[auth] provisionOrLinkTrainee failed', err)
             if (!cancelled) setProvision('needs-profile')
           })
       })
-      .catch(() => {
+      .catch((err) => {
+        // The OAuth-callback completion / user resolve chain. A silent .catch()
+        // here is what masked the T-084 cross-instance seam (academy-web#34):
+        // surface it so a failed callback or user fetch is diagnosable.
+        console.error('[auth] sign-in state resolve failed', err)
         if (!cancelled) setReady(true)
       })
     return () => {
