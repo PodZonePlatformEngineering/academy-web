@@ -675,9 +675,10 @@ export default function Tutor() {
           </div>
         </div>
         <p className="text-sm text-muted-foreground">
-          Streams directly from Anthropic on your own key; course material is matched in
-          this browser and retrieved from your entitled curricula. Rounds are saved so the
-          tutor picks up where you left off.
+          You&apos;re chatting with Alex, an AI tutor — not a human. It streams directly from
+          Anthropic on your own key; course material is matched in this browser and
+          retrieved from your entitled curricula. Rounds are saved so the tutor picks up
+          where you left off.
         </p>
       </div>
 

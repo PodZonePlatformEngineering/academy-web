@@ -133,6 +133,11 @@ export default function Home() {
         <h2 className="text-lg font-semibold">Help</h2>
         <Card>
           <CardContent className="space-y-4">
+            <HelpSection title="You're talking to an AI">
+              The tutor, Alex, is an AI, not a human — every reply is generated, not
+              reviewed or written by academy staff before you see it. It streams directly
+              from Anthropic on the key you provide below.
+            </HelpSection>
             <HelpSection title="Getting an Anthropic key">
               The tutor runs on your own Anthropic API key: create one in the Anthropic
               console (console.anthropic.com → API keys) and save it under Config above.
