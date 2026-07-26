@@ -144,6 +144,10 @@ function Hero() {
           row-level security, an AI tutor that runs on your own key and has read the
           whole syllabus, and streaks your team will pretend not to care about.
         </p>
+        <p className="mt-3 max-w-[540px] text-sm text-(--ink-600)">
+          The tutor is an AI, not a human — every answer is generated, streamed straight
+          from Anthropic on your own key.
+        </p>
         <div className="mt-7 flex flex-wrap items-center gap-3">
           {authConfigured ? (
             <Button className="px-4" asChild>

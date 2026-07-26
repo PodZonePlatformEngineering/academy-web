@@ -1,6 +1,8 @@
 import { useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
+import { ArrowRight } from 'lucide-react'
 import { Badge } from '@/components/ui/badge'
+import { Button } from '@/components/ui/button'
 import {
   Card,
   CardContent,
@@ -9,6 +11,8 @@ import {
   CardTitle,
 } from '@/components/ui/card'
 import { fetchCatalogue, type CatalogueRow } from '@/lib/api'
+import { authConfigured } from '@/lib/auth'
+import { useAuthState } from '@/lib/auth-state'
 
 function CatalogueGrid({ rows }: { rows: CatalogueRow[] }) {
   return (
@@ -39,14 +43,48 @@ function CatalogueGrid({ rows }: { rows: CatalogueRow[] }) {
   )
 }
 
+// T-058: the Data API requires a valid bearer JWT on every call, gateway-side
+// — there is no anonymous-caller role reachable from a signed-out visitor
+// here (confirmed live: Stack Auth's own anonymous-session tokens are signed
+// by a key the Data API's configured JWKS can't resolve — "jwk not found").
+// A signed-out fetchCatalogue() call is therefore not a permissions gap to
+// patch with a grant; it always 400s at the gateway before Postgres sees it.
+// Signed-out visitors get a labelled sign-in nudge instead of a doomed call.
+function SignInNudge() {
+  return (
+    <Card>
+      <CardHeader>
+        <CardTitle>Sign in to browse the catalogue</CardTitle>
+        <CardDescription>
+          The live catalogue is served per-account. Sign in — it&apos;s quick, and free
+          curricula stay free.
+        </CardDescription>
+      </CardHeader>
+      <CardContent>
+        <Button asChild>
+          <Link to="/sign-in">
+            Sign in <ArrowRight />
+          </Link>
+        </Button>
+      </CardContent>
+    </Card>
+  )
+}
+
 export default function Catalogue() {
+  const { visitor } = useAuthState()
   const [rows, setRows] = useState<CatalogueRow[] | null>(null)
   const [error, setError] = useState<string | null>(null)
 
-  useEffect(() => {
-    fetchCatalogue().then(setRows, (e: Error) => setError(e.message))
-  }, [])
+  const needsSignIn = authConfigured && visitor === 'signed-out'
 
+  useEffect(() => {
+    if (needsSignIn || visitor === 'unknown') return
+    fetchCatalogue().then(setRows, (e: Error) => setError(e.message))
+  }, [needsSignIn, visitor])
+
+  if (needsSignIn) return <SignInNudge />
+  if (visitor === 'unknown') return <p className="text-sm text-muted-foreground">Loading catalogue…</p>
   if (error) return <p className="text-sm text-destructive">Catalogue failed to load: {error}</p>
   if (!rows) return <p className="text-sm text-muted-foreground">Loading catalogue…</p>
 
