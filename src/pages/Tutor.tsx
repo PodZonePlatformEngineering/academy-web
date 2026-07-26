@@ -37,6 +37,7 @@ import {
   resolveActiveCurriculum,
 } from '@/lib/activeCurriculum'
 import {
+  enrolSelf,
   fetchCatalogue,
   fetchContent,
   fetchEnrolments,
@@ -95,24 +96,28 @@ function SourceChips({ points }: { points: ChipSource[] }) {
   )
 }
 
-// Header curriculum switcher (B9): a native select over the trainee's other
-// entitled+enrolled curricula. Selecting one sets last-used and reloads the
-// thread for that curriculum (from its own cache).
+// Header curriculum switcher (B9, T-086): a native select over every
+// entitled curriculum. Selecting one not yet enrolled lazily enrols
+// (enrol-on-switch) before switching; already-enrolled ones switch straight
+// away.
 function CurriculumSwitcher({
   options,
   current,
   onSelect,
+  disabled,
 }: {
   options: CatalogueRow[]
   current: CatalogueRow
   onSelect: (slug: string) => void
+  disabled?: boolean
 }) {
   return (
     <select
       aria-label="Switch curriculum"
       value={current.slug}
+      disabled={disabled}
       onChange={(e) => onSelect(e.target.value)}
-      className="h-8 rounded-md border border-border bg-background px-2 text-sm font-medium focus-visible:ring-3 focus-visible:ring-ring/50 focus-visible:outline-none"
+      className="h-8 rounded-md border border-border bg-background px-2 text-sm font-medium focus-visible:ring-3 focus-visible:ring-ring/50 focus-visible:outline-none disabled:opacity-60"
     >
       {options.map((o) => (
         <option key={o.slug} value={o.slug}>
@@ -268,6 +273,8 @@ export default function Tutor() {
   const { conversations, getConversation, setConversation } = useConversationCache()
   const [curriculum, setCurriculum] = useState<CatalogueRow | null>(null)
   const [switchable, setSwitchable] = useState<CatalogueRow[]>([])
+  const [enrolledIds, setEnrolledIds] = useState<Set<number>>(new Set())
+  const [switching, setSwitching] = useState(false)
   const [noEnrolment, setNoEnrolment] = useState(false)
   const [preamble, setPreamble] = useState<PreambleData | null>(null)
   const [preambleReady, setPreambleReady] = useState(false)
@@ -318,8 +325,11 @@ export default function Tutor() {
     }
   }, [])
 
-  // B8: which curriculum, from the activeCurriculum seam. Also records the set
-  // of switchable curricula (entitled + enrolled) for the header switcher.
+  // B8: which curriculum, from the activeCurriculum seam. Also records the
+  // full set of entitled curricula for the header switcher (T-086:
+  // enrol-on-switch shows every entitlement, not just today's enrolments) and
+  // which of those are already enrolled, so switchCurriculum knows when a
+  // selection needs a lazy enrol first.
   useEffect(() => {
     Promise.all([fetchCatalogue(), fetchEnrolments()]).then(
       ([catalogue, enrolments]) => {
@@ -328,8 +338,8 @@ export default function Tutor() {
           setNoEnrolment(true)
           return
         }
-        const enrolledIds = new Set(enrolments.map((e) => e.curriculum_id))
-        setSwitchable(catalogue.filter((c) => c.access && enrolledIds.has(c.id)))
+        setEnrolledIds(new Set(enrolments.map((e) => e.curriculum_id)))
+        setSwitchable(catalogue.filter((c) => c.access))
         recordCurriculumUsed(resolved.slug)
         setCurriculum(resolved)
       },
@@ -460,10 +470,22 @@ export default function Tutor() {
     setConversation(cid, update(current))
   }
 
-  const switchCurriculum = (slug: string) => {
-    if (slug === curriculum.slug) return
+  const switchCurriculum = async (slug: string) => {
+    if (slug === curriculum.slug || switching) return
     const next = switchable.find((c) => c.slug === slug)
     if (!next) return
+    if (!enrolledIds.has(next.id)) {
+      setSwitching(true)
+      try {
+        await enrolSelf(next.id)
+        setEnrolledIds((ids) => new Set(ids).add(next.id))
+      } catch (e) {
+        setError(`Could not switch to ${next.title}: ${(e as Error).message}`)
+        return
+      } finally {
+        setSwitching(false)
+      }
+    }
     setError(null)
     setTranscriptNote(null)
     setDraft('')
@@ -610,7 +632,12 @@ export default function Tutor() {
         <div className="mt-2 flex flex-wrap items-center gap-2">
           <h1 className="text-2xl font-semibold">Tutor</h1>
           {canSwitch ? (
-            <CurriculumSwitcher options={switchable} current={curriculum} onSelect={switchCurriculum} />
+            <CurriculumSwitcher
+              options={switchable}
+              current={curriculum}
+              onSelect={switchCurriculum}
+              disabled={switching}
+            />
           ) : (
             <Badge variant="outline">scoped to {curriculum.slug}</Badge>
           )}

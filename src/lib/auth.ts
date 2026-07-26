@@ -62,6 +62,12 @@ export const stackConfig = {
     afterSignUp: import.meta.env.BASE_URL,
     afterSignOut: import.meta.env.BASE_URL,
     error: import.meta.env.BASE_URL,
+    // T-085: the prebuilt <SignIn/>'s "Sign up" link defaults to
+    // {origin}/handler/sign-up (the StackHandler route this hash-routed app
+    // does not host, academy-web#36 item 2). Point it at our own in-app
+    // /sign-up hash route instead — same relative/BASE_URL-derived shape as
+    // every other url above, so it still resolves on the GH-Pages subpath.
+    signUp: `${import.meta.env.BASE_URL}#/sign-up`,
   },
 }
 

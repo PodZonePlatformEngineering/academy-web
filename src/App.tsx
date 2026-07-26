@@ -16,6 +16,7 @@ import Landing from '@/pages/Landing'
 import ProfileManagement from '@/pages/ProfileManagement'
 import Scoreboard from '@/pages/Scoreboard'
 import SignIn from '@/pages/SignIn'
+import SignUp from '@/pages/SignUp'
 import Tutor from '@/pages/Tutor'
 
 function AuthControls() {
@@ -115,6 +116,7 @@ export default function App() {
           <Routes>
             <Route path="/" element={<Landing />} />
             <Route path="/sign-in" element={<SignIn />} />
+            <Route path="/sign-up" element={<SignUp />} />
             <Route
               path="/tutor"
               element={
