@@ -313,6 +313,22 @@ export async function fetchEnrolmentId(curriculumId: number): Promise<number | n
   return rows[0]?.id ?? null
 }
 
+export interface EnrolSelfResult {
+  status: 'exists' | 'created'
+  enrolment_id: number
+  curriculum_id: number
+}
+
+/**
+ * Lazily enrol the caller in an entitled-but-not-yet-enrolled curriculum
+ * (T-086, admin migration 031). Self-scoped SECURITY DEFINER RPC: resolves
+ * the caller's own trainee, validates their entitlement server-side, and is
+ * idempotent (an existing active enrolment is returned as-is, no error).
+ */
+export async function enrolSelf(curriculumId: number): Promise<EnrolSelfResult> {
+  return post<EnrolSelfResult>('/rpc/enrol_self', { p_curriculum_id: curriculumId })
+}
+
 export async function fetchProgress(enrolmentId: number): Promise<ProgressRow[]> {
   if (demoMode) return []
   return get<ProgressRow[]>(
