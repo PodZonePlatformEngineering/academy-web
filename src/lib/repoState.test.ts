@@ -48,7 +48,7 @@ describe('repoView — backend-driven states (task 3)', () => {
     expect(v.showTransferHint).toBe(true)
     expect(v.showRepoUrl).toBe(true)
     expect(v.tone).toBe('action')
-    expect(v.headline).toMatch(/accept the transfer/i)
+    expect(v.headline).toMatch(/accept the collaborator invitation/i)
     expect(v.canRequest).toBe(false)
   })
 
