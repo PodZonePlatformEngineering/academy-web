@@ -6,6 +6,12 @@
 // gate + request + the `requested` view are exercisable end-to-end today; the
 // later states are rendered here in full but stay backend-driven until task 3
 // exists (the brief's deferrable tail — implemented, not stubbed).
+//
+// `transfer_pending` is a legacy status name (no migration, T-077 Phase B
+// rework 2026-07-28): GitHub disallows an admin-initiated org→user repo
+// transfer, so the repo stays org-owned and the trainee is invited as a
+// collaborator instead. Copy below reflects invitation language; `ready`
+// links the org repo URL (the repo never moves).
 
 import type { RepoState, RepoStatus } from '@/lib/api'
 
@@ -22,7 +28,7 @@ export interface RepoView {
   badge: string
   /** Whether the repo URL (when present) should be surfaced as a link. */
   showRepoUrl: boolean
-  /** transfer_pending: show the "accept the transfer on GitHub" instruction. */
+  /** transfer_pending: show the "accept the invitation on GitHub" instruction. */
   showTransferHint: boolean
   /** A resting state → offer the request control. */
   canRequest: boolean
@@ -34,7 +40,7 @@ const BADGE: Record<RepoStatus, string> = {
   requested: 'Requested',
   building: 'Building',
   created: 'Created',
-  transfer_pending: 'Transfer pending',
+  transfer_pending: 'Invite pending',
   ready: 'Ready',
   failed: 'Failed',
 }
@@ -51,7 +57,7 @@ export function repoView(repo: RepoState | null): RepoView {
       return {
         headline: 'Your training repo is being prepared',
         detail:
-          'We have your request. Your repository is queued to be created and transferred to your GitHub account — this can take a little while.',
+          'We have your request. Your repository is queued to be created, and you will be invited as a collaborator on your GitHub account — this can take a little while.',
         tone: 'pending',
         badge: BADGE.requested,
         showRepoUrl: false,
@@ -74,7 +80,7 @@ export function repoView(repo: RepoState | null): RepoView {
       return {
         headline: 'Your training repo has been created',
         detail:
-          'Your repository is ready on our side and a transfer to your GitHub account is being set up.',
+          'Your repository is ready on our side and a collaborator invitation to your GitHub account is being set up.',
         tone: 'progress',
         badge: BADGE.created,
         showRepoUrl: true,
@@ -84,9 +90,9 @@ export function repoView(repo: RepoState | null): RepoView {
       }
     case 'transfer_pending':
       return {
-        headline: 'Accept the transfer request on GitHub',
+        headline: 'Accept the collaborator invitation on GitHub',
         detail:
-          'We have sent your repository to your GitHub account. Open GitHub (your notifications, or the repository page) and accept the pending transfer to take ownership.',
+          'Check your GitHub email or notifications for the collaborator invitation on your training repository, and accept it to get access.',
         tone: 'action',
         badge: BADGE.transfer_pending,
         showRepoUrl: true,
@@ -98,7 +104,7 @@ export function repoView(repo: RepoState | null): RepoView {
       return {
         headline: 'Your training repo is ready',
         detail:
-          'Your repository is in your GitHub account. Clone it and follow its README to start the CLI-based training. Need a fresh one? You can request another.',
+          'You have collaborator access to your training repository. Clone it and follow its README to start the CLI-based training. Need a fresh one? You can request another.',
         tone: 'ready',
         badge: BADGE.ready,
         showRepoUrl: true,
@@ -123,7 +129,7 @@ export function repoView(repo: RepoState | null): RepoView {
       return {
         headline: 'Request a training repo',
         detail:
-          'Prefer the command line? Request your own GitHub training repository: a personal repo, seeded from the training template, transferred to your GitHub account, with a CLI tutor that mirrors the web one. The web academy stays available either way.',
+          'Prefer the command line? Request your own GitHub training repository: seeded from the training template, with collaborator access granted on your GitHub account and a CLI tutor that mirrors the web one. The web academy stays available either way.',
         tone: 'pending',
         badge: '',
         showRepoUrl: false,

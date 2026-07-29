@@ -76,7 +76,7 @@ export default function TrainingRepoCard() {
   if (!github.connected && !hasState) return null
 
   const canRequest = view.canRequest
-  // A request must carry the handle the backend transfers to; if GitHub is
+  // A request must carry the handle the backend invites as a collaborator; if GitHub is
   // connected but we couldn't read the username (token/scopes), block the
   // request with a clear reason rather than sending an empty handle.
   const handleMissing = canRequest && github.connected && !github.login
@@ -123,9 +123,9 @@ export default function TrainingRepoCard() {
 
         {view.showTransferHint && (
           <p className="text-xs text-muted-foreground">
-            GitHub will not move a repository without your consent, so you have to accept the
-            transfer. Look for the request in your GitHub notifications
-            {repo?.repo_url ? ' or on the repository page above' : ''}.
+            Check your GitHub email or notifications for the collaborator invitation
+            {repo?.repo_url ? ' (or the repository page above)' : ''} and accept it to get
+            access.
           </p>
         )}
 
