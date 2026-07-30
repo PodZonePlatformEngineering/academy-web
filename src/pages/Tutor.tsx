@@ -525,12 +525,12 @@ export default function Tutor() {
     }
   }
 
-  const send = async () => {
-    const question = draft.trim()
+  const send = async (override?: string) => {
+    const question = (override ?? draft).trim()
     if (!question || busy || cid === null) return
     setBusy(true)
     setError(null)
-    setDraft('')
+    if (override === undefined) setDraft('')
     // Visible-text history (includes any re-hydrated rounds) seeds the model
     // context; only this turn carries its retrieval block (bounded growth).
     const history: TutorTurn[] = turns.map(({ role, text }) => ({ role, text }))
@@ -570,6 +570,7 @@ export default function Tutor() {
             text: reply.text,
             at: timeNow(),
             sources: points,
+            truncated: reply.truncated,
             meta: `${reply.model} · ${points.length} passage${points.length === 1 ? '' : 's'} retrieved · ${reply.inputTokens} in / ${reply.outputTokens} out tokens (your spend)`,
           },
         ],
@@ -588,6 +589,9 @@ export default function Tutor() {
           model: reply.model,
           promptTokens: reply.inputTokens,
           completionTokens: reply.outputTokens,
+          cacheReadTokens: reply.cacheReadTokens,
+          cacheCreationTokens: reply.cacheCreationTokens,
+          stopReason: reply.stopReason,
         }).catch((e) => setTranscriptNote(`Transcript write failed: ${String(e)}`))
       }
     } catch (e) {
@@ -722,6 +726,19 @@ export default function Tutor() {
                   <ChatBubble role="tutor" timestamp={[t.at, t.meta].filter(Boolean).join(' · ')}>
                     {t.text}
                   </ChatBubble>
+                  {t.truncated && (
+                    <p className="text-xs text-muted-foreground">
+                      Alex ran out of room and this answer was cut short.{' '}
+                      <button
+                        type="button"
+                        className="underline underline-offset-2 hover:text-foreground disabled:opacity-50"
+                        disabled={busy}
+                        onClick={() => void send('Please continue your previous answer where you left off.')}
+                      >
+                        Continue
+                      </button>
+                    </p>
+                  )}
                 </Fragment>
               ),
             )}
