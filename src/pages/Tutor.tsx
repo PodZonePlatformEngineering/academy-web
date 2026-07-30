@@ -589,6 +589,9 @@ export default function Tutor() {
           model: reply.model,
           promptTokens: reply.inputTokens,
           completionTokens: reply.outputTokens,
+          cacheReadTokens: reply.cacheReadTokens,
+          cacheCreationTokens: reply.cacheCreationTokens,
+          stopReason: reply.stopReason,
         }).catch((e) => setTranscriptNote(`Transcript write failed: ${String(e)}`))
       }
     } catch (e) {

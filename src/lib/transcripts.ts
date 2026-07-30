@@ -125,6 +125,10 @@ export interface PromptRoundInput {
   model: string
   promptTokens: number | null
   completionTokens: number | null
+  // T-114/T-115 (migration 034): cache accounting + truncation signal.
+  cacheReadTokens: number | null
+  cacheCreationTokens: number | null
+  stopReason: string | null
 }
 
 /**
@@ -142,6 +146,9 @@ export async function recordPrompt(round: PromptRoundInput): Promise<PromptRow> 
     model: round.model,
     prompt_tokens: round.promptTokens,
     completion_tokens: round.completionTokens,
+    cache_read_tokens: round.cacheReadTokens,
+    cache_creation_tokens: round.cacheCreationTokens,
+    stop_reason: round.stopReason,
   })
   return rows[0]
 }
