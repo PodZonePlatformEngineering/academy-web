@@ -84,6 +84,8 @@ export interface ChatTurn {
   meta?: string
   /** Retrieval hits shown as chips above an assistant turn. */
   sources?: ChipSource[]
+  /** T-115: API cut this answer short (stop_reason === 'max_tokens'). */
+  truncated?: boolean
 }
 
 /** Refs + scores for the round store, built from a turn's retrieval hits. */
