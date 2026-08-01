@@ -1,5 +1,7 @@
 import { useCallback, useEffect, useState } from 'react'
 import { Link, useLocation, useParams } from 'react-router-dom'
+import AssessmentQuiz from '@/components/AssessmentQuiz'
+import ContentBlock from '@/components/ContentBlock'
 import GamificationStrip from '@/components/GamificationStrip'
 import MarkdownBody from '@/components/MarkdownBody'
 import { Badge } from '@/components/ui/badge'
@@ -11,6 +13,13 @@ import {
   CardHeader,
   CardTitle,
 } from '@/components/ui/card'
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+} from '@/components/ui/dialog'
 import {
   fetchCatalogue,
   fetchContent,
@@ -30,15 +39,6 @@ import {
 import { recordCurriculumUsed } from '@/lib/activeCurriculum'
 import { moduleComplete, sectionsByModule, stateForPoint } from '@/lib/gamification'
 import { tutorConfigured } from '@/lib/tutorConfig'
-
-function Section({ row }: { row: ContentRow }) {
-  return (
-    <div className="rounded-lg border bg-muted/30 p-4">
-      <p className="micro mb-2 text-primary">{row.section_id ?? 'module overview'}</p>
-      <MarkdownBody>{row.body}</MarkdownBody>
-    </div>
-  )
-}
 
 // One markable unit (section or lab). The mark is a self-attested progress
 // write via the mark_progress RPC — XP/streak/achievements happen server-side
@@ -89,6 +89,8 @@ function SectionMark({
 
 function Module({
   module,
+  curriculumSlug,
+  enrolmentId,
   sections,
   progress,
   marking,
@@ -96,6 +98,8 @@ function Module({
   onMark,
 }: {
   module: ModuleRow
+  curriculumSlug: string
+  enrolmentId: number | null
   sections: SectionRow[]
   progress: ProgressRow[]
   marking: boolean
@@ -105,6 +109,7 @@ function Module({
   const [content, setContent] = useState<ContentRow[] | null>(null)
   const [error, setError] = useState<string | null>(null)
   const [open, setOpen] = useState(false)
+  const [quizOpen, setQuizOpen] = useState(false)
   const openable = module.section_count > 0 || sections.length > 0
   const completed = moduleComplete(progress, module.id)
 
@@ -133,6 +138,11 @@ function Module({
               ? `${sections.length} section${sections.length === 1 ? '' : 's'}`
               : `${module.section_count} section${module.section_count === 1 ? '' : 's'}`}
           </Badge>
+          {entitled && module.code && (
+            <Button variant="outline" size="sm" onClick={() => setQuizOpen(true)}>
+              Take assessment
+            </Button>
+          )}
           <Button variant="outline" size="sm" onClick={toggle} disabled={!openable}>
             {open ? 'Close' : 'Open'}
           </Button>
@@ -159,8 +169,24 @@ function Module({
             </div>
           )}
           {error && <p className="text-sm text-destructive">Content failed to load: {error}</p>}
-          {content?.map((s) => <Section key={s.section_id ?? 'module'} row={s} />)}
+          {content?.map((s) => <ContentBlock key={s.section_id ?? 'module'} row={s} />)}
         </CardContent>
+      )}
+      {module.code && (
+        <Dialog open={quizOpen} onOpenChange={setQuizOpen}>
+          <DialogContent side="center">
+            <DialogHeader>
+              <DialogTitle>{module.title} — assessment</DialogTitle>
+              <DialogDescription>Answer every question, then submit for grading.</DialogDescription>
+            </DialogHeader>
+            <AssessmentQuiz
+              curriculumSlug={curriculumSlug}
+              moduleId={module.code}
+              assessmentId={`${module.code}-assessment`}
+              enrolmentId={enrolmentId}
+            />
+          </DialogContent>
+        </Dialog>
       )}
     </Card>
   )
@@ -253,6 +279,8 @@ export default function Curriculum() {
         <Module
           key={m.id}
           module={m}
+          curriculumSlug={curriculum.slug}
+          enrolmentId={enrolmentId}
           sections={(m.code && grouped.get(m.code)) || []}
           progress={progress}
           marking={marking}
