@@ -36,6 +36,11 @@ jobs:
           # API since B-12 (in-browser embed + rag_search under RLS); there is
           # no retrieval endpoint variable any more.
           VITE_TUTOR_MODEL: ${{ vars.VITE_TUTOR_MODEL }}
+          # T-141: the CF Pages Functions base URL serving /api/assessment/*
+          # (functions/ in this repo, deployed to the academy-web CF Pages
+          # project) — public-by-design, same shape as VITE_DATA_API_URL.
+          # Unset builds the demo-fixtures quiz path (src/lib/assessment.ts).
+          VITE_ASSESSMENT_API_URL: ${{ vars.VITE_ASSESSMENT_API_URL }}
       - name: Secrets gate — architecture v2 §5 (no credentials in the public bundle)
         run: |
           # client_secret must only trip on an assigned string literal (a real
