@@ -17,6 +17,7 @@ import { Eye, EyeOff } from 'lucide-react'
 import { useConversationCache, type CachedConversation } from '@/components/ConversationCacheProvider'
 import ContentBlock from '@/components/ContentBlock'
 import GamificationStrip from '@/components/GamificationStrip'
+import MarkdownBody from '@/components/MarkdownBody'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Card, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
@@ -79,8 +80,11 @@ const timeNow = () =>
 
 // The passages a reply is grounded in, as in-stream lesson chips. Reads the
 // minimal ChipSource shape, so a re-hydrated round (RagRef refs) chips exactly
-// like a live one (RetrievedPoint hits).
-function SourceChips({ points }: { points: ChipSource[] }) {
+// like a live one (RetrievedPoint hits). T-138 item 4: clicking a chip opens
+// the retrieved passage text — already in memory on a live hit, no new
+// fetch — in an overlay, closing the "fetched, never shown" gap review plan
+// §3.4/§7 named.
+function SourceChips({ points, onSelect }: { points: ChipSource[]; onSelect: (p: ChipSource) => void }) {
   return (
     <div className="flex max-w-[78%] flex-wrap gap-1.5 self-start">
       {points.map((p, i) => (
@@ -90,9 +94,44 @@ function SourceChips({ points }: { points: ChipSource[] }) {
           eyebrow={[p.module_id, p.section_id].filter(Boolean).join('/') || undefined}
           title={p.title ?? p.type ?? 'course passage'}
           meta={`${Math.round(p.score * 100)}%`}
+          role="button"
+          tabIndex={0}
+          className="cursor-pointer transition-colors hover:bg-accent"
+          onClick={() => onSelect(p)}
+          onKeyDown={(e) => {
+            if (e.key === 'Enter' || e.key === ' ') {
+              e.preventDefault()
+              onSelect(p)
+            }
+          }}
         />
       ))}
     </div>
+  )
+}
+
+// The click-through overlay for one source chip (T-138 item 4).
+function SourcePassageOverlay({ source, onClose }: { source: ChipSource | null; onClose: () => void }) {
+  return (
+    <Dialog open={source !== null} onOpenChange={(open) => !open && onClose()}>
+      <DialogContent side="center">
+        <DialogHeader>
+          <DialogTitle>{source?.title ?? source?.type ?? 'Retrieved passage'}</DialogTitle>
+          <DialogDescription>
+            {[source?.module_id, source?.section_id].filter(Boolean).join(' / ') || 'Course passage'}
+            {source && ` · ${Math.round(source.score * 100)}% match`}
+          </DialogDescription>
+        </DialogHeader>
+        {source?.text ? (
+          <MarkdownBody>{source.text}</MarkdownBody>
+        ) : (
+          <p className="text-sm text-muted-foreground">
+            The passage text isn’t available for this reloaded round — only live retrievals in the
+            current session keep the full text in memory.
+          </p>
+        )}
+      </DialogContent>
+    </Dialog>
   )
 }
 
@@ -281,6 +320,7 @@ export default function Tutor() {
   const [progress, setProgress] = useState<ProgressRow[]>([])
   const [summary, setSummary] = useState<GamificationSummary | null>(null)
   const [openModule, setOpenModule] = useState<ModuleRow | null>(null)
+  const [openSource, setOpenSource] = useState<ChipSource | null>(null)
   const [mobilePane, setMobilePane] = useState<'progress' | 'outline' | null>(null)
   const [loadingEarlier, setLoadingEarlier] = useState(false)
   const endRef = useRef<HTMLDivElement>(null)
@@ -713,7 +753,9 @@ export default function Tutor() {
                 </ChatBubble>
               ) : (
                 <Fragment key={i}>
-                  {t.sources && t.sources.length > 0 && <SourceChips points={t.sources} />}
+                  {t.sources && t.sources.length > 0 && (
+                    <SourceChips points={t.sources} onSelect={setOpenSource} />
+                  )}
                   <ChatBubble role="tutor" timestamp={[t.at, t.meta].filter(Boolean).join(' · ')}>
                     {t.text}
                   </ChatBubble>
@@ -735,7 +777,9 @@ export default function Tutor() {
             )}
             {streaming !== null && (
               <>
-                {pendingSources && pendingSources.length > 0 && <SourceChips points={pendingSources} />}
+                {pendingSources && pendingSources.length > 0 && (
+                  <SourceChips points={pendingSources} onSelect={setOpenSource} />
+                )}
                 <ChatBubble role="tutor" streaming>
                   {streaming}
                 </ChatBubble>
@@ -777,6 +821,7 @@ export default function Tutor() {
       </Dialog>
 
       <ModuleContentOverlay curriculum={curriculum} module={openModule} onClose={() => setOpenModule(null)} />
+      <SourcePassageOverlay source={openSource} onClose={() => setOpenSource(null)} />
     </div>
   )
 }

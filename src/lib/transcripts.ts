@@ -71,6 +71,13 @@ export interface ChipSource {
   module_id: string | null
   section_id: string | null
   title: string | null
+  /**
+   * The retrieved passage text (T-138 item 4). Present on a live
+   * RetrievedPoint hit (already in memory — no new fetch); absent on a
+   * re-hydrated round (RagRef only ever stored refs + scores, Q-2), where
+   * the click-through shows a "not available" fallback instead.
+   */
+  text?: string
 }
 
 // A rendered conversation turn (one chat bubble). Shared by the live stream
