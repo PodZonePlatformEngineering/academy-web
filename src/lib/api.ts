@@ -150,6 +150,12 @@ const demoContent: ContentRow[] = [
     body: '# Cohort discussion prompt\n\nThis demo row shows the present-but-unavailable state.',
     type: 'group_discussion',
   },
+  {
+    module_code: 'T039',
+    section_id: '02-diagram',
+    body: '# Demo diagram\n\n```mermaid\nflowchart LR\n  A[Trainee] --> B{Entitled?}\n  B -- yes --> C[Render content]\n  B -- no --> D[Unavailable state]\n```\n',
+    type: 'section',
+  },
 ]
 
 // --- Queries ---------------------------------------------------------------
