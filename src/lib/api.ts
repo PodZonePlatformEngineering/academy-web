@@ -35,6 +35,13 @@ export interface ContentRow {
   module_code: string
   section_id: string | null
   body: string
+  /**
+   * curriculum_point.type of this row's anchor point (academy-admin migration
+   * 035, T-132 item 5) — null only for pre-schema-v2 rows with no matching
+   * curriculum_point (e.g. the T-039 acceptance test-seed stub), which render
+   * as ordinary prose same as before this column existed.
+   */
+  type: string | null
 }
 
 import { getAccessToken } from '@/lib/auth'
@@ -135,6 +142,13 @@ const demoContent: ContentRow[] = [
     section_id: '00-acceptance',
     body:
       '# Demo section\n\nThis is placeholder demo copy rendered because the SPA is not yet\nconnected to the Neon Data API. Real sections are served from the\nRLS-gated content table once P1.2 wiring lands.',
+    type: 'section',
+  },
+  {
+    module_code: 'T039',
+    section_id: '01-discussion',
+    body: '# Cohort discussion prompt\n\nThis demo row shows the present-but-unavailable state.',
+    type: 'group_discussion',
   },
 ]
 
@@ -179,7 +193,7 @@ export async function fetchContent(
   if (demoMode) return demoContent.filter((c) => c.module_code === moduleCode)
   return get<ContentRow[]>(
     `/content?curriculum_id=eq.${curriculumId}&module_code=eq.${encodeURIComponent(moduleCode)}` +
-      '&select=module_code,section_id,body&order=section_id',
+      '&select=module_code,section_id,body,type&order=section_id',
   )
 }
 

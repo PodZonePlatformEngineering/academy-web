@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useState } from 'react'
 import { Link, useLocation, useParams } from 'react-router-dom'
+import ContentBlock from '@/components/ContentBlock'
 import GamificationStrip from '@/components/GamificationStrip'
 import MarkdownBody from '@/components/MarkdownBody'
 import { Badge } from '@/components/ui/badge'
@@ -30,15 +31,6 @@ import {
 import { recordCurriculumUsed } from '@/lib/activeCurriculum'
 import { moduleComplete, sectionsByModule, stateForPoint } from '@/lib/gamification'
 import { tutorConfigured } from '@/lib/tutorConfig'
-
-function Section({ row }: { row: ContentRow }) {
-  return (
-    <div className="rounded-lg border bg-muted/30 p-4">
-      <p className="micro mb-2 text-primary">{row.section_id ?? 'module overview'}</p>
-      <MarkdownBody>{row.body}</MarkdownBody>
-    </div>
-  )
-}
 
 // One markable unit (section or lab). The mark is a self-attested progress
 // write via the mark_progress RPC — XP/streak/achievements happen server-side
@@ -159,7 +151,7 @@ function Module({
             </div>
           )}
           {error && <p className="text-sm text-destructive">Content failed to load: {error}</p>}
-          {content?.map((s) => <Section key={s.section_id ?? 'module'} row={s} />)}
+          {content?.map((s) => <ContentBlock key={s.section_id ?? 'module'} row={s} />)}
         </CardContent>
       )}
     </Card>

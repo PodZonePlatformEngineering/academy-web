@@ -15,8 +15,8 @@ import { Fragment, useEffect, useRef, useState } from 'react'
 import { Link, Navigate } from 'react-router-dom'
 import { Eye, EyeOff } from 'lucide-react'
 import { useConversationCache, type CachedConversation } from '@/components/ConversationCacheProvider'
+import ContentBlock from '@/components/ContentBlock'
 import GamificationStrip from '@/components/GamificationStrip'
-import MarkdownBody from '@/components/MarkdownBody'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Card, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
@@ -198,15 +198,6 @@ function ProgressPane({
   )
 }
 
-function ModuleSection({ row }: { row: ContentRow }) {
-  return (
-    <div className="rounded-lg border bg-muted/30 p-4">
-      <p className="micro mb-2 text-primary">{row.section_id ?? 'module overview'}</p>
-      <MarkdownBody>{row.body}</MarkdownBody>
-    </div>
-  )
-}
-
 // The module-content overlay (B9): the same fetchContent read the library
 // serves, over the chat thread — the thread stays mounted underneath.
 function ModuleContentOverlay({
@@ -260,7 +251,7 @@ function ModuleContentOverlay({
         {content && content.length > 0 && (
           <div className="space-y-3">
             {content.map((s) => (
-              <ModuleSection key={s.section_id ?? 'module'} row={s} />
+              <ContentBlock key={s.section_id ?? 'module'} row={s} />
             ))}
           </div>
         )}
