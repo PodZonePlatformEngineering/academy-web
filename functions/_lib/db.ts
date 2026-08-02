@@ -5,22 +5,30 @@
 // session/transaction semantics, not one-shot queries.
 import { Pool, type PoolClient } from '@neondatabase/serverless'
 
-let pool: Pool | null = null
-
-function getPool(connectionString: string): Pool {
-  if (!pool) pool = new Pool({ connectionString })
-  return pool
-}
-
-/** Runs `fn` with a checked-out client, always releasing it afterwards. */
+// PROJ-011/T-146: a module-level singleton `Pool` used to be cached here
+// and reused across invocations. Cloudflare Pages Functions reuse a
+// module's top-level scope across requests within the same isolate, but
+// the driver's README is explicit that a `Pool`/`Client`'s WebSocket
+// "can't outlive a single request" in serverless environments — it "must
+// be connected, used and closed within a single request handler". The
+// first request on a given isolate connected fine; every later request on
+// that isolate reused the now-dead WebSocket and `.connect()` threw a raw,
+// message-less exception (Cloudflare's generic 500, no CORS headers —
+// exactly what was observed live). Fix: one `Pool` per call, torn down
+// with the request.
 export async function withClient<T>(
   databaseUrl: string,
   fn: (client: PoolClient) => Promise<T>,
 ): Promise<T> {
-  const client = await getPool(databaseUrl).connect()
+  const pool = new Pool({ connectionString: databaseUrl })
   try {
-    return await fn(client)
+    const client = await pool.connect()
+    try {
+      return await fn(client)
+    } finally {
+      client.release()
+    }
   } finally {
-    client.release()
+    await pool.end()
   }
 }
