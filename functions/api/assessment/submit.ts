@@ -10,7 +10,7 @@
 // authenticated — reachable only through this admin-DSN connection, same
 // as the Python original).
 import type { Env } from '../../_lib/env'
-import { json } from '../../_lib/env'
+import { handleOptions, json } from '../../_lib/env'
 import { AuthError, verifyTraineeSub } from '../../_lib/jwt'
 import { withClient } from '../../_lib/db'
 import { NotEntitled } from '../../_lib/entitlement'
@@ -25,13 +25,16 @@ interface RequestBody {
   answers: Record<string, string>
 }
 
+export const onRequestOptions: PagesFunction<Env> = async (context) => handleOptions(context.request)
+
 export const onRequestPost: PagesFunction<Env> = async (context) => {
   const { request, env } = context
+  const origin = request.headers.get('Origin')
   let traineeSub: string
   try {
     traineeSub = await verifyTraineeSub(request.headers.get('Authorization'), env.STACK_PROJECT_ID)
   } catch (e) {
-    if (e instanceof AuthError) return json({ error: e.message }, 401)
+    if (e instanceof AuthError) return json({ error: e.message }, 401, origin)
     throw e
   }
 
@@ -39,13 +42,14 @@ export const onRequestPost: PagesFunction<Env> = async (context) => {
   try {
     body = await request.json()
   } catch {
-    return json({ error: 'invalid JSON body' }, 400)
+    return json({ error: 'invalid JSON body' }, 400, origin)
   }
   const { claim_id, curriculum_slug, module_id, assessment_id, answers } = body
   if (!claim_id || !curriculum_slug || !module_id || !assessment_id || !answers) {
     return json(
       { error: 'claim_id, curriculum_slug, module_id, assessment_id, answers are required' },
       400,
+      origin,
     )
   }
 
@@ -71,16 +75,20 @@ export const onRequestPost: PagesFunction<Env> = async (context) => {
       ])
       return grade
     })
-    return json({
-      correct: result.correct,
-      total: result.total,
-      threshold: result.threshold,
-      passed: result.passed,
-    })
+    return json(
+      {
+        correct: result.correct,
+        total: result.total,
+        threshold: result.threshold,
+        passed: result.passed,
+      },
+      200,
+      origin,
+    )
   } catch (e) {
-    if (e instanceof NotEntitled) return json({ error: e.message }, 403)
-    if (e instanceof GradingError) return json({ error: e.message }, 400)
-    if (e instanceof QdrantError) return json({ error: e.message }, 502)
+    if (e instanceof NotEntitled) return json({ error: e.message }, 403, origin)
+    if (e instanceof GradingError) return json({ error: e.message }, 400, origin)
+    if (e instanceof QdrantError) return json({ error: e.message }, 502, origin)
     throw e
   }
 }

@@ -7,7 +7,7 @@
 // — a trainee must be entitled to every question in the group to be served
 // any of it, same as grade_assessment() requires to grade it.
 import type { Env } from '../../_lib/env'
-import { json } from '../../_lib/env'
+import { handleOptions, json } from '../../_lib/env'
 import { AuthError, verifyTraineeSub } from '../../_lib/jwt'
 import { withClient } from '../../_lib/db'
 import { assertEntitled, NotEntitled } from '../../_lib/entitlement'
@@ -20,13 +20,16 @@ interface RequestBody {
   assessment_id: string
 }
 
+export const onRequestOptions: PagesFunction<Env> = async (context) => handleOptions(context.request)
+
 export const onRequestPost: PagesFunction<Env> = async (context) => {
   const { request, env } = context
+  const origin = request.headers.get('Origin')
   let traineeSub: string
   try {
     traineeSub = await verifyTraineeSub(request.headers.get('Authorization'), env.STACK_PROJECT_ID)
   } catch (e) {
-    if (e instanceof AuthError) return json({ error: e.message }, 401)
+    if (e instanceof AuthError) return json({ error: e.message }, 401, origin)
     throw e
   }
 
@@ -34,11 +37,11 @@ export const onRequestPost: PagesFunction<Env> = async (context) => {
   try {
     body = await request.json()
   } catch {
-    return json({ error: 'invalid JSON body' }, 400)
+    return json({ error: 'invalid JSON body' }, 400, origin)
   }
   const { curriculum_slug, module_id, assessment_id } = body
   if (!curriculum_slug || !module_id || !assessment_id) {
-    return json({ error: 'curriculum_slug, module_id, assessment_id are required' }, 400)
+    return json({ error: 'curriculum_slug, module_id, assessment_id are required' }, 400, origin)
   }
 
   try {
@@ -48,7 +51,7 @@ export const onRequestPost: PagesFunction<Env> = async (context) => {
       module_id,
       assessment_id,
     )
-    if (questions.length === 0) return json([])
+    if (questions.length === 0) return json([], 200, origin)
 
     await withClient(env.NEON_DATABASE_URL, async (client) => {
       for (const q of questions) {
@@ -56,10 +59,10 @@ export const onRequestPost: PagesFunction<Env> = async (context) => {
       }
     })
 
-    return json(servableQuestions(questions))
+    return json(servableQuestions(questions), 200, origin)
   } catch (e) {
-    if (e instanceof NotEntitled) return json({ error: e.message }, 403)
-    if (e instanceof QdrantError) return json({ error: e.message }, 502)
+    if (e instanceof NotEntitled) return json({ error: e.message }, 403, origin)
+    if (e instanceof QdrantError) return json({ error: e.message }, 502, origin)
     throw e
   }
 }
