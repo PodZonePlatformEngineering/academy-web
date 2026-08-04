@@ -37,6 +37,7 @@ import {
   type SectionRow,
 } from '@/lib/api'
 import { recordCurriculumUsed } from '@/lib/activeCurriculum'
+import { useAuthState } from '@/lib/auth-state'
 import { moduleComplete, sectionsByModule, stateForPoint } from '@/lib/gamification'
 import { tutorConfigured } from '@/lib/tutorConfig'
 
@@ -194,6 +195,7 @@ function Module({
 
 export default function Curriculum() {
   const { slug } = useParams()
+  const { visitor, provision } = useAuthState()
   // Arriving from the catalogue carries the row; a deep link refetches it.
   const seeded = (useLocation().state as { curriculum?: CatalogueRow } | null)?.curriculum
   const [curriculum, setCurriculum] = useState<CatalogueRow | null>(seeded ?? null)
@@ -205,13 +207,19 @@ export default function Curriculum() {
   const [marking, setMarking] = useState(false)
   const [error, setError] = useState<string | null>(null)
 
+  // T-191: same race as Catalogue.tsx — a signed-in visitor's trainee link is
+  // still resolving until `provision` settles, so a deep-link refetch here
+  // must wait too or it computes entitlement against an unlinked JWT subject.
+  // Signed-out browsing never waits on this.
+  const provisionPending = visitor === 'signed-in' && provision === 'unknown'
+
   useEffect(() => {
-    if (curriculum) return
+    if (curriculum || provisionPending) return
     fetchCatalogue().then(
       (rows) => setCurriculum(rows.find((c) => c.slug === slug) ?? null),
       (e: Error) => setError(e.message),
     )
-  }, [curriculum, slug])
+  }, [curriculum, slug, provisionPending])
 
   useEffect(() => {
     if (!curriculum) return

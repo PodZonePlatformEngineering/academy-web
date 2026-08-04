@@ -72,16 +72,21 @@ function SignInNudge() {
 }
 
 export default function Catalogue() {
-  const { visitor } = useAuthState()
+  const { visitor, provision } = useAuthState()
   const [rows, setRows] = useState<CatalogueRow[] | null>(null)
   const [error, setError] = useState<string | null>(null)
 
   const needsSignIn = authConfigured && visitor === 'signed-out'
+  // T-191: a signed-in visitor's trainee link is still resolving until
+  // `provision` settles — fetching before then computes entitlement against
+  // an unlinked JWT subject and shows a false "entitlement required".
+  // Signed-out browsing never waits on this (provision is never consulted).
+  const provisionPending = visitor === 'signed-in' && provision === 'unknown'
 
   useEffect(() => {
-    if (needsSignIn || visitor === 'unknown') return
+    if (needsSignIn || visitor === 'unknown' || provisionPending) return
     fetchCatalogue().then(setRows, (e: Error) => setError(e.message))
-  }, [needsSignIn, visitor])
+  }, [needsSignIn, visitor, provisionPending])
 
   if (needsSignIn) return <SignInNudge />
   if (visitor === 'unknown') return <p className="text-sm text-muted-foreground">Loading catalogue…</p>
