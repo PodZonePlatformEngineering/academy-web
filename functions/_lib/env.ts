@@ -20,6 +20,7 @@ export const ALLOWED_ORIGINS = [
   'https://www.podzone.academy',
   'https://podzone.academy',
   'https://academy.vibecreations.net',
+  'https://www.vibecreations.net',
   'https://academy-web-podzone.pages.dev',
   'https://academy-web-vibe.pages.dev',
 ]
