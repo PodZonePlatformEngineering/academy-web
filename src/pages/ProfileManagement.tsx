@@ -160,7 +160,11 @@ export default function ProfileManagement() {
       if (chosen) recordCurriculumUsed(chosen.slug)
       setProvision('provisioned')
       navigate('/tutor', { replace: true })
-    } catch {
+    } catch (err) {
+      // Never silent — a swallowed error here left T-174's "could not save
+      // profile" report with no diagnosable trail (unlike auth-state.tsx's
+      // deliberate console.error for the same class of bug, T-084).
+      console.error('[profile] provisionOrLinkTrainee failed', err)
       setError('Could not save your profile just now. Please try again.')
       setSubmitting(false)
     }
