@@ -13,6 +13,7 @@ import { withClient } from '../../_lib/db'
 import { assertEntitled, NotEntitled } from '../../_lib/entitlement'
 import { listAssessmentQuestions, servableQuestions } from '../../_lib/grading'
 import { QdrantError } from '../../_lib/qdrant'
+import { ModuleNotFound, resolveModule } from '../../_lib/curriculum'
 
 interface RequestBody {
   curriculum_slug: string
@@ -45,22 +46,29 @@ export const onRequestPost: PagesFunction<Env> = async (context) => {
   }
 
   try {
-    const questions = await listAssessmentQuestions(
-      env.PODZONE_QDRANT_APIKEY,
-      curriculum_slug,
-      module_id,
-      assessment_id,
-    )
-    if (questions.length === 0) return json([], 200, origin)
+    const result = await withClient(env.NEON_DATABASE_URL, async (client) => {
+      // curriculum_slug is accepted for API-contract compat but no longer
+      // 1:1-identifies content post-T-227 — resolve the real curriculum_id
+      // / Qdrant collection slug from module_id instead (PROJ-011/T-239).
+      const { curriculumId, qdrantSlug } = await resolveModule(client, module_id)
+      const questions = await listAssessmentQuestions(
+        env.PODZONE_QDRANT_APIKEY,
+        qdrantSlug,
+        module_id,
+        assessment_id,
+      )
+      if (questions.length === 0) return []
 
-    await withClient(env.NEON_DATABASE_URL, async (client) => {
       for (const q of questions) {
-        await assertEntitled(client, traineeSub, curriculum_slug, q.tracks as string[] | undefined)
+        await assertEntitled(client, traineeSub, curriculumId, q.tracks as string[] | undefined)
       }
+
+      return servableQuestions(questions)
     })
 
-    return json(servableQuestions(questions), 200, origin)
+    return json(result, 200, origin)
   } catch (e) {
+    if (e instanceof ModuleNotFound) return json({ error: e.message }, 404, origin)
     if (e instanceof NotEntitled) return json({ error: e.message }, 403, origin)
     if (e instanceof QdrantError) return json({ error: e.message }, 502, origin)
     throw e

@@ -13,6 +13,7 @@ import type { PoolClient } from '@neondatabase/serverless'
 import { assertEntitled } from './entitlement'
 import { QuestionNotFound, SERVABLE_FIELDS } from './serving'
 import { scrollFilter } from './qdrant'
+import { resolveModule } from './curriculum'
 
 const ANSWER_PATTERNS = [/^\*\*Answer:\s*([A-D])\b/, /^\*\*Correct answer:\s*([A-D])\b/]
 
@@ -40,11 +41,11 @@ export interface QuestionPoint {
 /** Every live `assessment` point sharing (module_id, assessment_id) — a whole quiz's question set. */
 export async function listAssessmentQuestions(
   qdrantApiKey: string,
-  curriculumSlug: string,
+  qdrantSlug: string,
   moduleId: string,
   assessmentId: string,
 ): Promise<QuestionPoint[]> {
-  const coll = `academy-${curriculumSlug}-keys`
+  const coll = `academy-${qdrantSlug}-keys`
   const pts = await scrollFilter(qdrantApiKey, coll, [
     { key: 'type', match: { value: 'assessment' } },
     { key: 'module_id', match: { value: moduleId } },
@@ -56,10 +57,10 @@ export async function listAssessmentQuestions(
 /** The answer_key point payload whose answer_key_for == questionPointId, or null. */
 export async function getAnswerKey(
   qdrantApiKey: string,
-  curriculumSlug: string,
+  qdrantSlug: string,
   questionPointId: string,
 ): Promise<Record<string, unknown> | null> {
-  const coll = `academy-${curriculumSlug}-keys`
+  const coll = `academy-${qdrantSlug}-keys`
   const matches = await scrollFilter(qdrantApiKey, coll, [
     { key: 'type', match: { value: 'answer_key' } },
     { key: 'answer_key_for', match: { value: questionPointId } },
@@ -74,11 +75,11 @@ export async function getAnswerKey(
 /** True iff submittedLetter matches the authored correct option. */
 export async function gradeOne(
   qdrantApiKey: string,
-  curriculumSlug: string,
+  qdrantSlug: string,
   questionPointId: string,
   submittedLetter: string | undefined,
 ): Promise<boolean> {
-  const ak = await getAnswerKey(qdrantApiKey, curriculumSlug, questionPointId)
+  const ak = await getAnswerKey(qdrantApiKey, qdrantSlug, questionPointId)
   if (ak === null) throw new GradingError(`${questionPointId} has no answer_key — not gradable`)
   const correct = extractCorrectLetter(ak.text as string)
   return (submittedLetter ?? '').trim().toUpperCase() === correct
@@ -108,12 +109,17 @@ export async function gradeAssessment(
   answers: Record<string, string>,
   traineeSub: string,
 ): Promise<GradeResult> {
-  const questions = await listAssessmentQuestions(qdrantApiKey, curriculumSlug, moduleId, assessmentId)
+  // curriculumSlug (as sent by the client) no longer 1:1-identifies a Qdrant
+  // collection or a curriculum row post-T-227 — resolve the real
+  // identifiers from moduleId instead (PROJ-011/T-239). curriculumSlug is
+  // kept only for error-message context below.
+  const { curriculumId, qdrantSlug } = await resolveModule(pgClient, moduleId)
+  const questions = await listAssessmentQuestions(qdrantApiKey, qdrantSlug, moduleId, assessmentId)
   if (questions.length === 0) {
     throw new GradingError(`no assessment questions for ${curriculumSlug}/${moduleId}/${assessmentId}`)
   }
   for (const q of questions) {
-    await assertEntitled(pgClient, traineeSub, curriculumSlug, q.tracks as string[] | undefined)
+    await assertEntitled(pgClient, traineeSub, curriculumId, q.tracks as string[] | undefined)
   }
   const qIds = new Set(questions.map((q) => q.id))
   const answered = new Set(Object.keys(answers))
@@ -127,7 +133,7 @@ export async function gradeAssessment(
   }
   const perQuestion: Record<string, boolean> = {}
   for (const qid of qIds) {
-    perQuestion[qid] = await gradeOne(qdrantApiKey, curriculumSlug, qid, answers[qid])
+    perQuestion[qid] = await gradeOne(qdrantApiKey, qdrantSlug, qid, answers[qid])
   }
   const total = qIds.size
   const correct = Object.values(perQuestion).filter(Boolean).length

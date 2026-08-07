@@ -6,6 +6,7 @@
 import type { PoolClient } from '@neondatabase/serverless'
 import { assertEntitled } from './entitlement'
 import { qdrantCall } from './qdrant'
+import { resolveModule } from './curriculum'
 
 // The two question types quiz-serving may ever return. answer_key is
 // deliberately excluded — refused even by direct id.
@@ -58,6 +59,10 @@ export async function getQuestion(
   if (!QUESTION_TYPES.has(payload.type as string)) {
     throw new QuestionNotFound(`${pointId} is type ${payload.type} in ${coll} — not a servable question`)
   }
-  await assertEntitled(pgClient, traineeSub, curriculumSlug, payload.tracks as string[] | undefined)
+  // curriculumSlug (as given to this function) no longer 1:1-identifies a
+  // curriculum row post-T-227 — resolve the real curriculum_id from the
+  // point's own module_id instead (PROJ-011/T-239).
+  const { curriculumId } = await resolveModule(pgClient, payload.module_id as string)
+  await assertEntitled(pgClient, traineeSub, curriculumId, payload.tracks as string[] | undefined)
   return { id: pointId, ...whitelist(payload) }
 }
