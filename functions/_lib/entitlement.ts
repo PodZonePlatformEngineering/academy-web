@@ -9,6 +9,11 @@
 // set_config the GUC, SET LOCAL ROLE authenticated (exercising the real
 // grant path, not owner-privilege bypass), then read the two functions'
 // results.
+//
+// PROJ-011/T-239: takes `curriculumId` (resolved once via
+// curriculum.ts's resolveModule(), from module_id) rather than
+// re-deriving/joining a `curriculum.slug` here — see curriculum.ts for why
+// a slug is no longer a reliable 1:1 content identifier post-T-227.
 import type { PoolClient } from '@neondatabase/serverless'
 
 export class NotEntitled extends Error {}
@@ -16,7 +21,7 @@ export class NotEntitled extends Error {}
 export async function isEntitled(
   client: PoolClient,
   traineeSub: string,
-  curriculumSlug: string,
+  curriculumId: number,
   tracks: string[] | null | undefined,
 ): Promise<boolean> {
   if (!traineeSub) return false
@@ -27,10 +32,8 @@ export async function isEntitled(
     ])
     await client.query('SET LOCAL ROLE authenticated')
     const byCurriculum = await client.query(
-      `SELECT 1 FROM academy.entitled_curriculum_ids() eci
-       JOIN curriculum c ON c.id = eci.curriculum_id
-       WHERE c.slug = $1`,
-      [curriculumSlug],
+      `SELECT 1 FROM academy.entitled_curriculum_ids() WHERE curriculum_id = $1`,
+      [curriculumId],
     )
     if (byCurriculum.rows.length > 0) {
       await client.query('COMMIT')
@@ -57,12 +60,12 @@ export async function isEntitled(
 export async function assertEntitled(
   client: PoolClient,
   traineeSub: string,
-  curriculumSlug: string,
+  curriculumId: number,
   tracks: string[] | null | undefined,
 ): Promise<void> {
-  if (!(await isEntitled(client, traineeSub, curriculumSlug, tracks))) {
+  if (!(await isEntitled(client, traineeSub, curriculumId, tracks))) {
     throw new NotEntitled(
-      `trainee is not entitled to curriculum ${curriculumSlug}` +
+      `trainee is not entitled to curriculum ${curriculumId}` +
         (tracks && tracks.length ? ` or tracks ${JSON.stringify(tracks)}` : ''),
     )
   }

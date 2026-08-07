@@ -16,6 +16,7 @@ import { withClient } from '../../_lib/db'
 import { NotEntitled } from '../../_lib/entitlement'
 import { gradeAssessment, GradingError } from '../../_lib/grading'
 import { QdrantError } from '../../_lib/qdrant'
+import { ModuleNotFound } from '../../_lib/curriculum'
 
 interface RequestBody {
   claim_id: number
@@ -86,6 +87,7 @@ export const onRequestPost: PagesFunction<Env> = async (context) => {
       origin,
     )
   } catch (e) {
+    if (e instanceof ModuleNotFound) return json({ error: e.message }, 404, origin)
     if (e instanceof NotEntitled) return json({ error: e.message }, 403, origin)
     if (e instanceof GradingError) return json({ error: e.message }, 400, origin)
     if (e instanceof QdrantError) return json({ error: e.message }, 502, origin)
