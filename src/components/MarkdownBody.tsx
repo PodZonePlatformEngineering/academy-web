@@ -2,10 +2,21 @@
 // (T-023/T-043 curriculum ingest). Used by both the Tutor overlay and the
 // library's inline expand view via ContentBlock (T-051, folded further in
 // T-138 item 6) so the two callers stay on one fix.
-import { isValidElement, useEffect, useId, useRef, useState } from 'react'
+import {
+  Children,
+  cloneElement,
+  isValidElement,
+  type ReactElement,
+  type ReactNode,
+  useEffect,
+  useId,
+  useRef,
+  useState,
+} from 'react'
 import ReactMarkdown, { type Components } from 'react-markdown'
 import remarkGfm from 'remark-gfm'
 import { cn } from '@/lib/utils'
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 
 // The curriculum markdown carries repo-relative links from the git-repo ingest
 // — e.g. `[01](01-how-llms-work.md)` — that made sense in the source tree but
@@ -63,6 +74,52 @@ function isMermaidCodeElement(node: unknown): boolean {
   return isValidElement(node) && node.type === Mermaid
 }
 
+function extractText(node: ReactNode): string {
+  if (typeof node === 'string' || typeof node === 'number') return String(node)
+  if (Array.isArray(node)) return node.map(extractText).join('')
+  if (isValidElement(node)) return extractText((node.props as { children?: ReactNode }).children)
+  return ''
+}
+
+/**
+ * The callout convention (T-207, per t206 §5 item 4/plannerapi's T-273
+ * precedent): a blockquote whose first paragraph opens with a bold,
+ * colon-terminated label — `> **Note:** rest of text`. Detected structurally
+ * off the already-rendered `<p>`/`<strong>` elements react-markdown produces
+ * for the blockquote's children, not by re-parsing markdown source.
+ */
+function splitLabelledBlockquote(
+  children: ReactNode,
+): { label: string; rest: ReactNode[] } | null {
+  const blocks = Children.toArray(children).filter(
+    (node) => !(typeof node === 'string' && node.trim() === ''),
+  )
+  const [firstBlock, ...restBlocks] = blocks
+  if (!isValidElement(firstBlock) || firstBlock.type !== 'p') return null
+
+  const paraChildren = Children.toArray(
+    (firstBlock.props as { children?: ReactNode }).children,
+  )
+  const [firstInline, ...restInline] = paraChildren
+  if (!isValidElement(firstInline) || firstInline.type !== 'strong') return null
+
+  const rawLabel = extractText((firstInline.props as { children?: ReactNode }).children).trim()
+  if (!rawLabel.endsWith(':')) return null
+  const label = rawLabel.slice(0, -1).trim()
+  if (!label) return null
+
+  const trimmedInline = restInline
+    .map((node) => (typeof node === 'string' ? node.replace(/^[:\s]+/, '') : node))
+    .filter((node) => node !== '')
+
+  const remainderParagraph =
+    trimmedInline.length > 0
+      ? cloneElement(firstBlock as ReactElement<{ children?: ReactNode }>, {}, trimmedInline)
+      : null
+
+  return { label, rest: remainderParagraph ? [remainderParagraph, ...restBlocks] : restBlocks }
+}
+
 const components: Components = {
   a({ href, children }) {
     if (isExternalHttpLink(href)) {
@@ -74,6 +131,27 @@ const components: Components = {
     }
     // Neutralise: show the words, drop the 404-bound anchor.
     return <span>{children}</span>
+  },
+  // Additive: an unlabelled blockquote renders exactly as before. Composes
+  // with the code/pre overrides below rather than replacing them — mermaid
+  // fences aren't blockquotes, so this override never intercepts them.
+  blockquote({ children }) {
+    const callout = splitLabelledBlockquote(children)
+    if (!callout) {
+      return <blockquote>{children}</blockquote>
+    }
+    return (
+      <Card className="not-prose my-4">
+        <CardHeader className="pb-2">
+          <CardTitle>{callout.label}</CardTitle>
+        </CardHeader>
+        {callout.rest.length > 0 ? (
+          <CardContent className="prose prose-sm prose-app max-w-none">
+            {callout.rest}
+          </CardContent>
+        ) : null}
+      </Card>
+    )
   },
   code({ className, children }) {
     const language = /language-(\w+)/.exec(className || '')?.[1]
@@ -93,7 +171,7 @@ const components: Components = {
 
 function MarkdownBody({ children, className }: { children: string; className?: string }) {
   return (
-    <div className={cn('prose prose-sm dark:prose-invert max-w-none', className)}>
+    <div className={cn('prose prose-sm prose-app max-w-none', className)}>
       <ReactMarkdown remarkPlugins={[remarkGfm]} components={components}>
         {children}
       </ReactMarkdown>
