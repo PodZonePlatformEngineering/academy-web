@@ -101,3 +101,32 @@ describe('Mermaid diagrams still render after the callout override (composition 
     expect(title?.textContent).toBe('Note')
   })
 })
+
+// PROJ-011/T-209: a wide `flowchart LR` (VC8.05B) squeezed illegibly small
+// because the rendered svg's width="100%" attribute won out over its own
+// `max-width` in a narrow content column. jsdom has no real layout engine,
+// so this can't assert on measured pixel width/overflow — instead it locks
+// in the CSS mechanism the fix relies on: the diagram's own container must
+// scroll horizontally, and the svg must not be forced to 100% of it.
+describe('Mermaid diagram container has scroll handling for wide diagrams (T-209)', () => {
+  it('renders the mermaid container with horizontal scroll and an unconstrained-width svg', async () => {
+    const markdown = [
+      '```mermaid',
+      'flowchart LR',
+      '    A["Customer hits a problem"] --> B["They report it"]',
+      '    B --> C["A complaint is the good outcome"]',
+      '```',
+    ].join('\n')
+    const { container } = render(<MarkdownBody>{markdown}</MarkdownBody>)
+
+    const diagram = await waitFor(() => {
+      const el = container.querySelector('.mermaid-diagram')
+      expect(el?.querySelector('svg')).toBeTruthy()
+      return el
+    })
+
+    expect(diagram?.className).toContain('overflow-x-auto')
+    // Preserves centering for diagrams that do fit the column.
+    expect(diagram?.className).toContain('justify-center')
+  })
+})

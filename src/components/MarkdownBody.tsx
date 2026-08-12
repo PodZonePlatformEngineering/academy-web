@@ -67,7 +67,20 @@ function Mermaid({ chart }: { chart: string }) {
       </div>
     )
   }
-  return <div ref={ref} className="mermaid-diagram not-prose my-2 flex justify-center" />
+  // PROJ-011/T-209: mermaid's rendered svg carries width="100%" plus a
+  // `style="max-width: Npx"` (N = the diagram's natural, legible size). When
+  // the content column is narrower than N, width:100% wins and the diagram
+  // is squeezed down to column width, shrinking every label past legibility
+  // (a wide `flowchart LR` like VC8.05B). Forcing the svg to its intrinsic
+  // width (from its viewBox) makes it always render at its natural size —
+  // unchanged for diagrams that already fit, and now scrollable via
+  // overflow-x-auto instead of squeezed for ones that don't.
+  return (
+    <div
+      ref={ref}
+      className="mermaid-diagram not-prose my-2 flex justify-center overflow-x-auto [&>svg]:w-auto"
+    />
+  )
 }
 
 function isMermaidCodeElement(node: unknown): boolean {
