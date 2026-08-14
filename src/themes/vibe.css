@@ -1,0 +1,80 @@
+/* =========================================================================
+   Vibe (VibeCreations) — "Industry" theme, sourced verbatim from the Claude
+   Design export (ACP-217). The whole file is the white-label contract in
+   action: it overrides ONLY brand vars from src/index.css (palette ramps,
+   fonts, radii, shadows) and ships its own self-hosted fonts. No semantic
+   var, component, or page knows this theme exists — the derivation in
+   index.css re-themes everything.
+
+   Industry is a "mono" palette (one neutral ramp + two accent ramps, no
+   third hue) — two gaps against the 5-family brand contract, resolved here:
+
+   - honey (tertiary/highlight, gamification badges): Industry has no third
+     hue to give it. clay already claims the accent ramp and ember the
+     accent-2 ramp, so reusing either for honey would make badges
+     indistinguishable from buttons/links. Derived from the neutral ramp
+     instead (steel/graphite badges) — on-brand for Industry's own
+     "blueprint" frame + "grid" layout, and doesn't invent a hue Industry
+     never specified.
+   - sage/rust (success/destructive semantics): Industry's export carries no
+     semantic states at all. Left UNSET here deliberately, so the stock
+     warm-theme values from src/index.css's :root keep applying — inventing
+     error/success colors from nothing would be guessing, and status colors
+     are exactly where guessing wrong is costliest (a wrong "destructive"
+     red reads as a real bug, not a theme gap).
+   ========================================================================= */
+
+@import "@fontsource/barlow-condensed/400.css";
+@import "@fontsource/barlow-condensed/600.css";
+@import "@fontsource/barlow/400.css";
+@import "@fontsource/barlow/500.css";
+@import "@fontsource/barlow/700.css";
+
+:root {
+    /* Steel blue replaces clay as the action ramp — Industry's accent ramp */
+    --clay-50:  #EEF6FF;
+    --clay-100: #D6EBFF;
+    --clay-300: #94BCE3;
+    --clay-500: #597EA3;   /* primary action — Industry's base accent */
+    --clay-600: #416180;   /* hover */
+    --clay-700: #2C455D;   /* pressed */
+
+    /* Slate replaces ember as the secondary ramp — Industry's accent-2 ramp */
+    --ember-300: #9EBBD8;
+    --ember-500: #627D98;  /* Industry's base accent2 */
+    --ember-600: #486077;
+
+    /* Honey: no hue in Industry — derived from the neutral ramp (see note above) */
+    --honey-200: #D4D4D7;
+    --honey-300: #B7B7BA;
+    --honey-500: #7A7A7D;
+
+    /* Inks — Industry's neutral ramp + literal text color */
+    --ink-900: #1D1F20;   /* body — Industry's literal text */
+    --ink-700: #424244;
+    --ink-600: #5D5D60;   /* secondary text */
+    --ink-400: #98989B;   /* tertiary, placeholder */
+    --ink-200: #D4D4D7;
+
+    /* Surfaces — Industry's bg/surface + neutral ramp for borders */
+    --cream-50:  #F2F2F3;  /* page bg — Industry's bg */
+    --cream-100: #E9E9EA;  /* card bg — Industry's surface */
+    --cream-200: #E7E7EA;  /* borders — neutral-200 */
+    --cream-300: #D4D4D7;  /* neutral-300 */
+
+    /* sage and rust intentionally left unset — see file header note */
+
+    --font-display: 'Barlow Condensed', system-ui, sans-serif;
+    --font-body:    'Barlow', system-ui, sans-serif;
+
+    /* Tighter, sharper — Industry's radius:4 / blueprint frame / grid layout
+       is a deliberate departure from the stock warm theme's rounded feel,
+       not a spec gap to round back up. */
+    --r-sm: 2px;
+    --r-md: 4px;
+    --r-lg: 7px;
+    --r-xl: 12px;
+
+    --shadow-soft: 0 1px 2px color-mix(in srgb, #2B2B2D 14%, transparent), 0 3px 10px color-mix(in srgb, #2B2B2D 16%, transparent);
+    --shadow-pop:  0 3px 10px color-mix(in srgb, #2B2B2D 16%, transparent), 0 12px 32px color-mix(in srgb, #2B2B2D 22%, transparent);
+}
