@@ -17,6 +17,7 @@
 
 const themes: Record<string, () => Promise<unknown>> = {
   quest: () => import('../themes/quest-academy.css'),
+  vibe: () => import('../themes/vibe.css'),
 }
 
 const PICKED = 'academy.theme'
