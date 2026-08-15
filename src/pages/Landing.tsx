@@ -23,18 +23,40 @@ import { Button } from '@/components/ui/button'
 import { ChatBubble } from '@/components/ui/chat-bubble'
 import { LessonCard } from '@/components/ui/lesson-card'
 import { authConfigured } from '@/lib/auth'
+import { activeTheme } from '@/lib/theme'
 import grainUrl from '@/assets/grain.svg'
 import markUrl from '@/assets/podzone-cloud-mark.png'
 import questCoatOfArmsUrl from '@/assets/quest-coat-of-arms.svg'
 import questMascotUrl from '@/assets/quest-mascot.svg'
+
+// vibe (PROJ-011/ACP-219) is the one theme with its own copy, not just CSS —
+// VibeCreations is a standalone product built on this app, so its brand name,
+// tagline and mark differ from the stock PodZone chrome around it. Every
+// other theme (including quest) re-skins this page's existing PodZone copy —
+// exactly what the WhiteLabel section below is demonstrating — so the check
+// is narrow: only `vibe` swaps content, everything else falls through to the
+// stock copy in place.
+const isVibe = activeTheme() === 'vibe'
 
 function scrollTo(id: string) {
   document.getElementById(id)?.scrollIntoView({ behavior: 'smooth' })
 }
 
 /** The cloud mark on its white tile — the PNG ships a white ground, so the
- *  ring frames it as a deliberate app-icon chip on any surface. */
+ *  ring frames it as a deliberate app-icon chip on any surface. vibe has no
+ *  raster mark of its own, so it draws the same crosshair glyph VibePortal
+ *  used, scaled to whatever size this call site needs. */
 function BrandMark({ className }: { className: string }) {
+  if (isVibe) {
+    return (
+      <span
+        className={`relative flex shrink-0 items-center justify-center border border-(--ink-900) ${className}`}
+      >
+        <span className="absolute inset-y-1 left-1/2 w-px -translate-x-1/2 bg-primary" />
+        <span className="absolute inset-x-1 top-1/2 h-px -translate-y-1/2 bg-primary" />
+      </span>
+    )
+  }
   return (
     <img
       src={markUrl}
@@ -50,9 +72,11 @@ function Nav() {
       <div className="flex items-center gap-2.5">
         <BrandMark className="size-8 rounded-lg" />
         <div>
-          <p className="font-heading text-[17px] leading-tight font-bold">PodZone Academy</p>
+          <p className="font-heading text-[17px] leading-tight font-bold">
+            {isVibe ? 'Vibe Creations' : 'PodZone Academy'}
+          </p>
           <p className="micro text-[9px] tracking-[0.14em] text-primary">
-            Powered by PodZone.Cloud
+            {isVibe ? 'A PodZone Academy studio' : 'Powered by PodZone.Cloud'}
           </p>
         </div>
       </div>
@@ -134,15 +158,33 @@ function Hero() {
     <section className="mx-auto grid max-w-6xl items-center gap-14 px-6 pt-10 pb-20 lg:grid-cols-[1.05fr_1fr]">
       <div>
         <span className="micro inline-flex items-center gap-1.5 rounded-full border bg-secondary px-3 py-1 text-primary">
-          <Sparkles className="size-3.5" /> A browser academy. Not another LMS.
+          <Sparkles className="size-3.5" />
+          {isVibe ? 'No prerequisite in programming' : 'A browser academy. Not another LMS.'}
         </span>
-        <h1 className="mt-4 font-heading text-5xl font-semibold tracking-[-0.025em] text-balance sm:text-6xl sm:leading-[1.02]">
-          Training that <em className="text-primary italic">actually</em> reaches your team.
-        </h1>
+        {isVibe ? (
+          <h1 className="mt-4 font-heading text-5xl font-semibold tracking-[-0.025em] text-balance sm:text-6xl sm:leading-[1.02]">
+            Ship AI systems. Never read a{' '}
+            <em className="text-primary italic">line of code</em>.
+          </h1>
+        ) : (
+          <h1 className="mt-4 font-heading text-5xl font-semibold tracking-[-0.025em] text-balance sm:text-6xl sm:leading-[1.02]">
+            Training that <em className="text-primary italic">actually</em> reaches your team.
+          </h1>
+        )}
         <p className="mt-4 max-w-[540px] text-lg leading-relaxed text-(--ink-700)">
-          PodZone Academy is a browser tab that pulls its weight: your curricula behind
-          row-level security, an AI tutor that runs on your own key and has read the
-          whole syllabus, and streaks your team will pretend not to care about.
+          {isVibe ? (
+            <>
+              Vibe Creations teaches the people who design, prompt, and wire up AI systems
+              — not the ones who debug them. If you can describe how something should
+              work, this curriculum gets it running.
+            </>
+          ) : (
+            <>
+              PodZone Academy is a browser tab that pulls its weight: your curricula behind
+              row-level security, an AI tutor that runs on your own key and has read the
+              whole syllabus, and streaks your team will pretend not to care about.
+            </>
+          )}
         </p>
         <p className="mt-3 max-w-[540px] text-sm text-(--ink-600)">
           The tutor is an AI, not a human — every answer is generated, streamed straight
@@ -222,14 +264,31 @@ const FEATURES = [
 function Features() {
   return (
     <section id="why" className="mx-auto max-w-6xl scroll-mt-6 px-6 py-16">
-      <p className="micro text-primary">Why this works</p>
-      <h2 className="mt-2 max-w-[800px] font-heading text-3xl font-semibold tracking-[-0.02em] text-balance sm:text-4xl">
-        Your LMS doesn&rsquo;t have a problem. Your <em className="text-primary italic">open rate</em> does.
-      </h2>
+      <p className="micro text-primary">{isVibe ? 'Who this is for' : 'Why this works'}</p>
+      {isVibe ? (
+        <h2 className="mt-2 max-w-[800px] font-heading text-3xl font-semibold tracking-[-0.02em] text-balance sm:text-4xl">
+          Built for people who think in <em className="text-primary italic">systems</em>, not
+          syntax.
+        </h2>
+      ) : (
+        <h2 className="mt-2 max-w-[800px] font-heading text-3xl font-semibold tracking-[-0.02em] text-balance sm:text-4xl">
+          Your LMS doesn&rsquo;t have a problem. Your <em className="text-primary italic">open rate</em> does.
+        </h2>
+      )}
       <p className="mt-3 max-w-[640px] leading-relaxed text-(--ink-600)">
-        If training lives in a heavyweight portal, half the team forgets the password by
-        week two. This one is a single browser tab: sign in, your curricula are already
-        there, and the tutor has read all of it.
+        {isVibe ? (
+          <>
+            Product managers, ops leads, founders, analysts — anyone who understands what a
+            system should do and wants to build it with AI instead of a dev queue. Sign in
+            and the same browser tab that teaches you has already read the whole syllabus.
+          </>
+        ) : (
+          <>
+            If training lives in a heavyweight portal, half the team forgets the password by
+            week two. This one is a single browser tab: sign in, your curricula are already
+            there, and the tutor has read all of it.
+          </>
+        )}
       </p>
       <div className="mt-12 grid gap-6 sm:grid-cols-2 lg:grid-cols-4">
         {FEATURES.map(({ icon: Icon, title, body }) => (
@@ -366,7 +425,9 @@ function ClosingCta() {
   return (
     <section id="signin" className="scroll-mt-6 px-6 py-20 text-center">
       <h2 className="mx-auto max-w-[700px] font-heading text-4xl font-semibold tracking-[-0.02em] text-balance sm:text-5xl">
-        Your first section is a sign-in away.
+        {isVibe
+          ? 'Your first working system is a few lessons away.'
+          : 'Your first section is a sign-in away.'}
       </h2>
       <p className="mx-auto mt-4 max-w-[560px] text-lg leading-relaxed text-(--ink-600)">
         Row-level security finds your curricula the moment you sign in, and the streak
@@ -397,9 +458,15 @@ function Footer() {
       <div className="mx-auto flex max-w-6xl flex-wrap items-center justify-between gap-4 text-[13px] text-(--ink-600)">
         <div className="flex items-center gap-2.5">
           <BrandMark className="size-6 rounded-md" />
-          <span>© PodZone.Cloud Platform Engineering · Academy is a PodZone product</span>
+          <span>
+            {isVibe
+              ? 'Vibe Creations — a PodZone Academy studio'
+              : '© PodZone.Cloud Platform Engineering · Academy is a PodZone product'}
+          </span>
         </div>
-        <span className="micro text-(--ink-400)">Powered by PodZone.Cloud</span>
+        <span className="micro text-(--ink-400)">
+          {isVibe ? 'Powered by PodZone Academy' : 'Powered by PodZone.Cloud'}
+        </span>
       </div>
     </footer>
   )

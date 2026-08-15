@@ -45,12 +45,18 @@ export function setPickedTheme(name: string | null): void {
   else localStorage.removeItem(PICKED)
 }
 
-export function applyTheme(): string | null {
+/** The theme name that would win under the precedence above, or null for stock. */
+export function activeTheme(): string | null {
   const requested =
     themeQueryOverride() ??
     (import.meta.env.VITE_THEME as string | undefined) ??
     pickedTheme()
-  if (!requested || !(requested in themes)) return null
+  return requested && requested in themes ? requested : null
+}
+
+export function applyTheme(): string | null {
+  const requested = activeTheme()
+  if (!requested) return null
   void themes[requested]()
   return requested
 }
