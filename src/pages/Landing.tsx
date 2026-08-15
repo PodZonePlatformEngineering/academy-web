@@ -479,7 +479,7 @@ export default function Landing() {
       <Hero />
       <Features />
       <HowBand />
-      <WhiteLabel />
+      {!isVibe && <WhiteLabel />}
       <ClosingCta />
       <Footer />
     </div>
