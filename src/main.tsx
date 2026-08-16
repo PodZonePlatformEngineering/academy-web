@@ -6,6 +6,10 @@ import App from './App.tsx'
 
 applyTheme()
 
+window.addEventListener('vite:preloadError', () => {
+  window.location.reload()
+})
+
 createRoot(document.getElementById('root')!).render(
   <StrictMode>
     <App />
