@@ -15,14 +15,22 @@ export interface Env {
 // (the one holding the secrets above) cross-origin, so the allowed origins
 // must be listed explicitly here — add a new branded domain as a one-line
 // entry, never widen this to `*`.
+// `vibecreations.net`/`www.vibecreations.net` are academy-frontend's own
+// domains, not academy-web's — listed here because academy-frontend calls
+// into this deployment cross-service. Bare apex added 2026-08-16
+// (academy-frontend#64): the www-only entry left an apex visitor's calls
+// silently CORS-failing, same class of bug academy-api's own
+// ALLOWED_ORIGINS had for the identical pair — see that file's history.
 export const ALLOWED_ORIGINS = [
   'https://academy-web-2a2.pages.dev',
   'https://www.podzone.academy',
   'https://podzone.academy',
   'https://academy.vibecreations.net',
+  'https://vibecreations.net',
   'https://www.vibecreations.net',
   'https://academy-web-podzone.pages.dev',
   'https://academy-web-vibe.pages.dev',
+  'https://academy-frontend-vibe.pages.dev',
 ]
 
 function corsHeaders(origin: string | null): Record<string, string> {
