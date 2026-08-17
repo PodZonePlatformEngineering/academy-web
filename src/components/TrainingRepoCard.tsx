@@ -28,6 +28,7 @@ import {
   type RepoState,
 } from '@/lib/api'
 import { getGithubConnection, type GithubConnection } from '@/lib/auth'
+import { featureRepoRequest } from '@/lib/featureFlags'
 import { repoView, type RepoTone } from '@/lib/repoState'
 
 const TONE_VARIANT: Record<RepoTone, 'secondary' | 'default' | 'success' | 'destructive'> = {
@@ -71,8 +72,9 @@ export default function TrainingRepoCard() {
   const hasState = Boolean(repo?.repo_status)
 
   // Gate: nothing to show for a non-GitHub user with no repo (and never in a
-  // demo build). Also stay silent while resolving, to avoid a flash.
-  if (demoMode || loading) return null
+  // demo build), or when this deployment has the feature off (ACP-245). Also
+  // stay silent while resolving, to avoid a flash.
+  if (!featureRepoRequest || demoMode || loading) return null
   if (!github.connected && !hasState) return null
 
   const canRequest = view.canRequest
