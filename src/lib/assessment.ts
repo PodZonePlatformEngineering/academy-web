@@ -39,11 +39,21 @@ async function assessmentPost<T>(path: string, body: unknown): Promise<T> {
     },
     body: JSON.stringify(body),
   })
-  if (res.status === 401 || res.status === 403) {
+  // 401 (auth/token failure — e.g. a broken server-side JWKS config,
+  // academy-gui#19/ACP-403) and 403 (genuine entitlement denial) used to
+  // collapse into the same "Not entitled" message, hiding real auth/infra
+  // failures behind a copy string that told the trainee (and whoever
+  // debugged the report) nothing useful. Only 403 means "denied" now; 401
+  // surfaces as a real error with the server's own message.
+  if (res.status === 403) {
     throw new AssessmentDenied('Not entitled to this assessment.')
   }
   if (!res.ok) {
-    throw new Error(`Assessment API ${res.status} on ${path}`)
+    const detail = await res
+      .json()
+      .then((d: { error?: string }) => d.error)
+      .catch(() => undefined)
+    throw new Error(detail ?? `Failed to retrieve questions (${res.status} on ${path})`)
   }
   return res.json() as Promise<T>
 }
