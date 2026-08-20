@@ -16,10 +16,21 @@ import { Pool, type PoolClient } from '@neondatabase/serverless'
 // message-less exception (Cloudflare's generic 500, no CORS headers —
 // exactly what was observed live). Fix: one `Pool` per call, torn down
 // with the request.
+export class MissingConfig extends Error {}
+
 export async function withClient<T>(
-  databaseUrl: string,
+  databaseUrl: string | undefined,
   fn: (client: PoolClient) => Promise<T>,
 ): Promise<T> {
+  // A missing/empty connectionString doesn't fail Pool.connect() fast — it
+  // hangs until Cloudflare's own platform timeout cancels the request
+  // (observed live, ACP-403 follow-up 2026-08-20: NEON_DATABASE_URL was
+  // absent from this Pages project's env vars entirely, and every request
+  // hung for the full timeout instead of erroring). Fail immediately with a
+  // diagnosable message instead.
+  if (!databaseUrl) {
+    throw new MissingConfig('NEON_DATABASE_URL is not configured for this deployment')
+  }
   const pool = new Pool({ connectionString: databaseUrl })
   try {
     const client = await pool.connect()

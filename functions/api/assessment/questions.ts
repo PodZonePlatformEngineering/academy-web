@@ -9,7 +9,7 @@
 import type { Env } from '../../_lib/env'
 import { handleOptions, json } from '../../_lib/env'
 import { AuthError, verifyTraineeSub } from '../../_lib/jwt'
-import { withClient } from '../../_lib/db'
+import { MissingConfig, withClient } from '../../_lib/db'
 import { assertEntitled, NotEntitled } from '../../_lib/entitlement'
 import { listAssessmentQuestions, servableQuestions } from '../../_lib/grading'
 import { QdrantError } from '../../_lib/qdrant'
@@ -69,6 +69,7 @@ export const onRequestPost: PagesFunction<Env> = async (context) => {
     if (e instanceof ModuleNotFound) return json({ error: e.message }, 404, origin)
     if (e instanceof NotEntitled) return json({ error: e.message }, 403, origin)
     if (e instanceof QdrantError) return json({ error: e.message }, 502, origin)
+    if (e instanceof MissingConfig) return json({ error: e.message }, 500, origin)
     throw e
   }
 }

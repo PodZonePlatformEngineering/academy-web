@@ -9,11 +9,17 @@ export const CLUSTER_URL =
 export class QdrantError extends Error {}
 
 export async function qdrantCall(
-  apiKey: string,
+  apiKey: string | undefined,
   method: string,
   path: string,
   body?: unknown,
 ): Promise<any> {
+  // Same fail-fast rationale as db.ts's withClient() — a missing key
+  // shouldn't reach fetch() and produce an ambiguous auth failure when the
+  // real problem is the deployment's own config (ACP-403 follow-up).
+  if (!apiKey) {
+    throw new QdrantError('PODZONE_QDRANT_APIKEY is not configured for this deployment')
+  }
   const res = await fetch(CLUSTER_URL + path, {
     method,
     headers: { 'api-key': apiKey, 'Content-Type': 'application/json' },
