@@ -2,7 +2,7 @@
 // must surface as a real Error with the server's own message, not collapse
 // into the same "Not entitled" message as a genuine 403 denial.
 
-import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
+import { afterEach, describe, expect, it, vi } from 'vitest'
 
 vi.mock('@/lib/auth', () => ({ getAccessToken: vi.fn().mockResolvedValue('tok') }))
 vi.mock('@/lib/api', () => ({ demoMode: false, post: vi.fn() }))
