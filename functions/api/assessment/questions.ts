@@ -59,9 +59,7 @@ export const onRequestPost: PagesFunction<Env> = async (context) => {
       )
       if (questions.length === 0) return []
 
-      for (const q of questions) {
-        await assertEntitled(client, traineeSub, curriculumId, q.tracks as string[] | undefined)
-      }
+      await assertEntitled(client, traineeSub, curriculumId)
 
       return servableQuestions(questions)
     })

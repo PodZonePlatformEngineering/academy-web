@@ -63,6 +63,6 @@ export async function getQuestion(
   // curriculum row post-T-227 — resolve the real curriculum_id from the
   // point's own module_id instead (PROJ-011/T-239).
   const { curriculumId } = await resolveModule(pgClient, payload.module_id as string)
-  await assertEntitled(pgClient, traineeSub, curriculumId, payload.tracks as string[] | undefined)
+  await assertEntitled(pgClient, traineeSub, curriculumId)
   return { id: pointId, ...whitelist(payload) }
 }

@@ -95,10 +95,9 @@ export interface GradeResult {
 
 /**
  * Grade a whole quiz submission. `traineeSub` is gated via
- * entitlement.assertEntitled against every question in the group before any
- * grading happens (checked per-question since `tracks` is a per-point tag).
- * `answers`: {question_point_id: submitted_letter} — must cover every live
- * question in the (module_id, assessment_id) group exactly.
+ * entitlement.assertEntitled against the group's curriculum before any
+ * grading happens. `answers`: {question_point_id: submitted_letter} — must
+ * cover every live question in the (module_id, assessment_id) group exactly.
  */
 export async function gradeAssessment(
   qdrantApiKey: string,
@@ -118,9 +117,7 @@ export async function gradeAssessment(
   if (questions.length === 0) {
     throw new GradingError(`no assessment questions for ${curriculumSlug}/${moduleId}/${assessmentId}`)
   }
-  for (const q of questions) {
-    await assertEntitled(pgClient, traineeSub, curriculumId, q.tracks as string[] | undefined)
-  }
+  await assertEntitled(pgClient, traineeSub, curriculumId)
   const qIds = new Set(questions.map((q) => q.id))
   const answered = new Set(Object.keys(answers))
   const missing = [...qIds].filter((id) => !answered.has(id))
