@@ -24,7 +24,6 @@ export const SERVABLE_FIELDS = [
   'ordinal',
   'title',
   'text',
-  'tracks',
 ] as const
 
 export class QuestionNotFound extends Error {}
