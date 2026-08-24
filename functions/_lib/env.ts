@@ -31,6 +31,11 @@ export const ALLOWED_ORIGINS = [
   'https://academy-web-podzone.pages.dev',
   'https://academy-web-vibe.pages.dev',
   'https://academy-frontend-vibe.pages.dev',
+  // ACP-412 (2026-08-24) — academy-frontend-qa now points its own
+  // VITE_ASSESSMENT_API_URL at a dedicated academy-web-qa deployment
+  // (this repo's `qa` branch), so QA's e2e suite exercises the actual
+  // production assessment code path instead of a duplicated copy.
+  'https://academy-frontend-qa.pages.dev',
 ]
 
 function corsHeaders(origin: string | null): Record<string, string> {
