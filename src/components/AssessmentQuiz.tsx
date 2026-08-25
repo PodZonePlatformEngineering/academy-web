@@ -35,7 +35,17 @@ function QuestionForm({
   return (
     <fieldset className="rounded-lg border bg-muted/30 p-4">
       <legend className="micro px-1 text-primary">{question.title ?? question.id}</legend>
-      <MarkdownBody>{question.text}</MarkdownBody>
+      {/* ACP-419: assessment `text` authors A)/B)/C)/D) options as bare
+          single-newline-separated lines, not a blank-line-separated markdown
+          list. GFM treats a lone "\n" inside a paragraph as a soft break
+          (collapsed to whitespace), so the options rendered as one run-on
+          paragraph. react-markdown keeps that literal "\n" in the DOM text
+          node either way (verified against this exact react-markdown@10 +
+          remark-gfm@4 stack) — `whitespace-pre-line` just tells the browser
+          to honour it as a real line break. Scoped to this one call site so
+          the shared MarkdownBody's soft-break behaviour elsewhere (lesson
+          prose, Tutor overlay) is untouched. */}
+      <MarkdownBody className="[&_p]:whitespace-pre-line">{question.text}</MarkdownBody>
       <div className="mt-3 flex flex-wrap gap-2">
         {LETTERS.map((letter) => (
           <label
