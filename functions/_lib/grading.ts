@@ -51,7 +51,11 @@ export async function listAssessmentQuestions(
     { key: 'module_id', match: { value: moduleId } },
     { key: 'assessment_id', match: { value: assessmentId } },
   ])
-  return pts.map((p) => ({ id: p.id, ...p.payload }))
+  const questions = pts.map((p) => ({ id: p.id, ...p.payload }))
+  // Qdrant's scroll API has no guaranteed ordering — sort by the payload's
+  // own ordinal so questions render in the order they were authored.
+  questions.sort((a, b) => Number(a.ordinal) - Number(b.ordinal))
+  return questions
 }
 
 /** The answer_key point payload whose answer_key_for == questionPointId, or null. */
