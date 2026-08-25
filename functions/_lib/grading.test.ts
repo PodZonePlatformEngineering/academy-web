@@ -7,7 +7,7 @@
 import { describe, expect, it, vi } from 'vitest'
 import { listAssessmentQuestions } from './grading'
 
-function mockScrollResponse(points: Array<{ id: string; ordinal: number }>) {
+function mockScrollResponse(points: Array<{ id: string; ordinal: number | null }>) {
   vi.stubGlobal(
     'fetch',
     vi.fn(async () => ({
@@ -33,5 +33,15 @@ describe('listAssessmentQuestions', () => {
     ])
     const questions = await listAssessmentQuestions('key', 'code-ai', 'M1', 'assessment')
     expect(questions.map((q) => q.id)).toEqual(['q1', 'q2', 'q3', 'q4', 'q5'])
+  })
+
+  it('sorts a null/missing ordinal last rather than coercing it to the front', async () => {
+    mockScrollResponse([
+      { id: 'q2', ordinal: 2 },
+      { id: 'qNull', ordinal: null },
+      { id: 'q1', ordinal: 1 },
+    ])
+    const questions = await listAssessmentQuestions('key', 'code-ai', 'M1', 'assessment')
+    expect(questions.map((q) => q.id)).toEqual(['q1', 'q2', 'qNull'])
   })
 })
