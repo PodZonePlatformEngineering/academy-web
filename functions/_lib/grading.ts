@@ -51,7 +51,19 @@ export async function listAssessmentQuestions(
     { key: 'module_id', match: { value: moduleId } },
     { key: 'assessment_id', match: { value: assessmentId } },
   ])
-  return pts.map((p) => ({ id: p.id, ...p.payload }))
+  const questions: QuestionPoint[] = pts.map((p) => ({ id: p.id, ...p.payload }))
+  // Qdrant's scroll API has no guaranteed ordering — sort by the payload's
+  // own ordinal so questions render in the order they were authored. A
+  // null/missing ordinal is a real content bug, not something to silently
+  // coerce to 0 (which would misplace it at the front) — sort those last.
+  questions.sort((a, b) => {
+    const aOrd = a.ordinal
+    const bOrd = b.ordinal
+    const aNum = typeof aOrd === 'number' ? aOrd : Infinity
+    const bNum = typeof bOrd === 'number' ? bOrd : Infinity
+    return aNum - bNum
+  })
+  return questions
 }
 
 /** The answer_key point payload whose answer_key_for == questionPointId, or null. */
