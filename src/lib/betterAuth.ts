@@ -86,12 +86,3 @@ export async function betterAuthSignUp(
   const { error } = await betterAuthClient().signUp.email({ name, email, password })
   return { ok: !error, error: error?.message ?? null }
 }
-
-/** ACP-431 — QA-only Google OAuth client (`oauth_providers[0]` on the qa branch). */
-export async function betterAuthSignInWithGoogle(): Promise<BetterAuthResult> {
-  const { error } = await betterAuthClient().signIn.social({
-    provider: 'google',
-    callbackURL: window.location.origin,
-  })
-  return { ok: !error, error: error?.message ?? null }
-}
