@@ -13,6 +13,18 @@ import type { ReactNode } from 'react'
 import { Link } from 'react-router-dom'
 import { StackProvider, StackTheme } from '@stackframe/react'
 import { authConfigured, stackApp } from '@/lib/auth'
+import { authProduct } from '@/lib/authProduct'
+
+function Frame({ children }: { children: ReactNode }) {
+  return (
+    <div className="flex min-h-screen flex-col items-center justify-center gap-6 bg-background p-6">
+      <Link to="/" className="font-heading text-lg font-semibold text-foreground">
+        PodZone Academy
+      </Link>
+      {children}
+    </div>
+  )
+}
 
 export default function AuthPageShell({ children }: { children: ReactNode }) {
   if (!authConfigured) {
@@ -22,15 +34,15 @@ export default function AuthPageShell({ children }: { children: ReactNode }) {
       </div>
     )
   }
+  // ACP-428: Better Auth has no StackProvider/StackTheme equivalent — its
+  // children (BetterAuthSignInForm/BetterAuthSignUpForm) are self-contained.
+  if (authProduct() === 'better-auth') {
+    return <Frame>{children}</Frame>
+  }
   return (
     <StackProvider app={stackApp()}>
       <StackTheme>
-        <div className="flex min-h-screen flex-col items-center justify-center gap-6 bg-background p-6">
-          <Link to="/" className="font-heading text-lg font-semibold text-foreground">
-            PodZone Academy
-          </Link>
-          {children}
-        </div>
+        <Frame>{children}</Frame>
       </StackTheme>
     </StackProvider>
   )
