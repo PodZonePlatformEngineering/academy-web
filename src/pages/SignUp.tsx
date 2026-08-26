@@ -9,11 +9,13 @@
 
 import { SignUp as PrebuiltSignUp } from '@stackframe/react'
 import AuthPageShell from '@/components/AuthPageShell'
+import BetterAuthSignUpForm from '@/components/BetterAuthSignUpForm'
+import { authProduct } from '@/lib/authProduct'
 
 export default function SignUp() {
   return (
     <AuthPageShell>
-      <PrebuiltSignUp />
+      {authProduct() === 'better-auth' ? <BetterAuthSignUpForm /> : <PrebuiltSignUp />}
     </AuthPageShell>
   )
 }
