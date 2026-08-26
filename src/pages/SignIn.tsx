@@ -12,11 +12,13 @@
 
 import { SignIn as PrebuiltSignIn } from '@stackframe/react'
 import AuthPageShell from '@/components/AuthPageShell'
+import BetterAuthSignInForm from '@/components/BetterAuthSignInForm'
+import { authProduct } from '@/lib/authProduct'
 
 export default function SignIn() {
   return (
     <AuthPageShell>
-      <PrebuiltSignIn />
+      {authProduct() === 'better-auth' ? <BetterAuthSignInForm /> : <PrebuiltSignIn />}
     </AuthPageShell>
   )
 }

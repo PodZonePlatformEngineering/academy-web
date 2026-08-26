@@ -26,12 +26,25 @@
 //   VITE_STACK_PUBLISHABLE_CLIENT_KEY  — Neon Auth publishable client key
 
 import { StackClientApp } from '@stackframe/react'
+import { authProduct } from './authProduct'
 
 const projectId: string | undefined = import.meta.env.VITE_STACK_PROJECT_ID
 const publishableClientKey: string | undefined = import.meta.env
   .VITE_STACK_PUBLISHABLE_CLIENT_KEY
 
-export const authConfigured = Boolean(projectId && publishableClientKey)
+// ACP-428: dynamically imported so the 'better-auth' client SDK (and its
+// @neondatabase/neon-js dependency) never lands in the 'stack' build's
+// synchronous chunk — see src/lib/betterAuth.ts's module comment.
+let betterAuthModule: typeof import('./betterAuth') | null = null
+async function betterAuth() {
+  betterAuthModule ??= await import('./betterAuth')
+  return betterAuthModule
+}
+
+export const authConfigured =
+  authProduct() === 'better-auth'
+    ? Boolean(import.meta.env.VITE_NEON_AUTH_URL)
+    : Boolean(projectId && publishableClientKey)
 
 export interface AuthUser {
   displayName: string | null
@@ -89,8 +102,13 @@ export function stackApp(): StackClientApp<true, string> {
 // One-shot: StrictMode remounts effects, but the code exchange must run once.
 let callbackOnce: Promise<boolean> | null = null
 
-/** Complete a pending OAuth redirect, if this load carries one. */
+/**
+ * Complete a pending OAuth redirect, if this load carries one. Better Auth's
+ * email/password flow (the only method wired up here, see betterAuth.ts) has
+ * no OAuth code-exchange step, so this is always a no-op in that mode.
+ */
 export function completeOAuthCallback(): Promise<boolean> {
+  if (authProduct() === 'better-auth') return Promise.resolve(false)
   if (!authConfigured || !new URLSearchParams(window.location.search).has('code')) {
     return Promise.resolve(false)
   }
@@ -99,6 +117,7 @@ export function completeOAuthCallback(): Promise<boolean> {
 }
 
 export async function getCurrentUser(): Promise<AuthUser | null> {
+  if (authProduct() === 'better-auth') return (await betterAuth()).getCurrentBetterAuthUser()
   if (!authConfigured) return null
   const user = await stackApp().getUser()
   if (!user) return null
@@ -111,6 +130,7 @@ export async function getCurrentUser(): Promise<AuthUser | null> {
 
 /** The Neon Auth session JWT for the Data API, or null when signed out. */
 export async function getAccessToken(): Promise<string | null> {
+  if (authProduct() === 'better-auth') return (await betterAuth()).getBetterAuthAccessToken()
   if (!authConfigured) return null
   const user = await stackApp().getUser()
   if (!user) return null
@@ -150,6 +170,9 @@ const NO_GITHUB: GithubConnection = { connected: false, login: null, accountId: 
  * hiccup degrades to connected:false / login:null rather than breaking Home.
  */
 export async function getGithubConnection(): Promise<GithubConnection> {
+  // Out of scope for ACP-428 (design doc: Better Auth's `account` table has
+  // no equivalent shape/API yet) — no GitHub-linking story in this mode.
+  if (authProduct() === 'better-auth') return NO_GITHUB
   if (!authConfigured) return NO_GITHUB
   try {
     const user = await stackApp().getUser()
@@ -208,6 +231,9 @@ async function githubLoginFromToken(accessToken: string): Promise<string | null>
 
 /** Whether the signed-in user holds the shared `admin` project permission. */
 export async function isAdmin(): Promise<boolean> {
+  // Out of scope for ACP-428 — no Better Auth equivalent of Stack's shared
+  // project-level `admin` permission has been designed.
+  if (authProduct() === 'better-auth') return false
   if (!authConfigured) return false
   try {
     const user = await stackApp().getUser()
@@ -219,6 +245,7 @@ export async function isAdmin(): Promise<boolean> {
 }
 
 export async function signOut(): Promise<void> {
+  if (authProduct() === 'better-auth') return (await betterAuth()).betterAuthSignOut()
   const user = await stackApp().getUser()
   await user?.signOut()
 }
