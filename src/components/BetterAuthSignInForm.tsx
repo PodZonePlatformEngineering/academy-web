@@ -31,6 +31,23 @@ export default function BetterAuthSignInForm() {
     }
   }
 
+  async function onGoogleSignIn() {
+    setSubmitting(true)
+    setError(null)
+    try {
+      const { betterAuthSignInWithGoogle } = await import('@/lib/betterAuth')
+      const result = await betterAuthSignInWithGoogle()
+      if (!result.ok) {
+        setError(result.error ?? 'Google sign-in failed')
+        setSubmitting(false)
+      }
+      // On success, signIn.social redirects the browser to Google — no
+      // further local state update needed.
+    } catch {
+      setSubmitting(false)
+    }
+  }
+
   return (
     <form
       onSubmit={onSubmit}
@@ -64,6 +81,14 @@ export default function BetterAuthSignInForm() {
         className="rounded bg-primary px-4 py-2 text-primary-foreground disabled:opacity-50"
       >
         {submitting ? 'Signing in…' : 'Sign in'}
+      </button>
+      <button
+        type="button"
+        onClick={onGoogleSignIn}
+        disabled={submitting}
+        className="rounded border border-border px-4 py-2 text-foreground disabled:opacity-50"
+      >
+        Sign in with Google
       </button>
       <p className="text-sm text-muted-foreground">
         Don't have an account?{' '}
