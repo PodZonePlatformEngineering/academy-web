@@ -12,6 +12,7 @@
 import type { Env } from '../../_lib/env'
 import { handleOptions, json } from '../../_lib/env'
 import { AuthError, verifyTraineeSub } from '../../_lib/jwt'
+import { verifyBetterAuthTraineeSub } from '../../_lib/betterAuthJwt'
 import { MissingConfig, withClient } from '../../_lib/db'
 import { NotEntitled } from '../../_lib/entitlement'
 import { gradeAssessment, GradingError } from '../../_lib/grading'
@@ -33,7 +34,10 @@ export const onRequestPost: PagesFunction<Env> = async (context) => {
   const origin = request.headers.get('Origin')
   let traineeSub: string
   try {
-    traineeSub = await verifyTraineeSub(request.headers.get('Authorization'), env.STACK_PROJECT_ID)
+    traineeSub =
+      env.AUTH_PRODUCT === 'better-auth'
+        ? await verifyBetterAuthTraineeSub(request.headers.get('Authorization'), env.NEON_AUTH_URL!)
+        : await verifyTraineeSub(request.headers.get('Authorization'), env.STACK_PROJECT_ID)
   } catch (e) {
     if (e instanceof AuthError) return json({ error: e.message }, 401, origin)
     throw e
