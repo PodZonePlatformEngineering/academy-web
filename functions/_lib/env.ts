@@ -9,6 +9,13 @@ export interface Env {
   PODZONE_QDRANT_APIKEY: string
   /** Neon Auth (Stack) project id — public-by-design, mirrors VITE_STACK_PROJECT_ID. */
   STACK_PROJECT_ID: string
+  /** ACP-428: 'stack' (default, unset-safe) or 'better-auth' — gates which
+   * JWKS betterAuthJwt.ts/jwt.ts verify against, mirrors VITE_AUTH_PRODUCT. */
+  AUTH_PRODUCT?: string
+  /** ACP-428: Neon Managed Better Auth base_url (get_neon_auth_config's
+   * `base_url`, e.g. `.../neondb/auth`) — only required when AUTH_PRODUCT is
+   * 'better-auth'. Mirrors VITE_NEON_AUTH_URL. */
+  NEON_AUTH_URL?: string
 }
 
 // PROJ-011/T-145: every branded academy-web instance calls this deployment
