@@ -1,8 +1,9 @@
 // Postgres access for the assessment backend (PROJ-011/T-141) — a pooled
 // WebSocket client (@neondatabase/serverless's `Pool`, not the fetch-only
-// `neon()` tagged-template client) because entitlement.py's dance
-// (set_config + SET LOCAL ROLE, both transaction-scoped) needs real
-// session/transaction semantics, not one-shot queries.
+// `neon()` tagged-template client) because a single request chains several
+// queries against the same session (module resolution, then grading
+// queries, then the privileged record_assessment_result write in
+// submit.ts).
 import { Pool, type PoolClient } from '@neondatabase/serverless'
 
 // PROJ-011/T-146: a module-level singleton `Pool` used to be cached here

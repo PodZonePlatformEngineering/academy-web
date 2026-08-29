@@ -10,7 +10,6 @@
 // - The passing threshold is ceil(0.8 * total), not a hardcoded "4" — one
 //   live quiz group (prompt-engineering/M3) has 6 questions, not 5.
 import type { PoolClient } from '@neondatabase/serverless'
-import { assertEntitled } from './entitlement'
 import { QuestionNotFound, SERVABLE_FIELDS } from './serving'
 import { scrollFilter } from './qdrant'
 import { resolveModule } from './curriculum'
@@ -94,10 +93,9 @@ export interface GradeResult {
 }
 
 /**
- * Grade a whole quiz submission. `traineeSub` is gated via
- * entitlement.assertEntitled against the group's curriculum before any
- * grading happens. `answers`: {question_point_id: submitted_letter} — must
- * cover every live question in the (module_id, assessment_id) group exactly.
+ * Grade a whole quiz submission. `answers`: {question_point_id:
+ * submitted_letter} — must cover every live question in the
+ * (module_id, assessment_id) group exactly.
  */
 export async function gradeAssessment(
   qdrantApiKey: string,
@@ -106,18 +104,16 @@ export async function gradeAssessment(
   moduleId: string,
   assessmentId: string,
   answers: Record<string, string>,
-  traineeSub: string,
 ): Promise<GradeResult> {
   // curriculumSlug (as sent by the client) no longer 1:1-identifies a Qdrant
   // collection or a curriculum row post-T-227 — resolve the real
   // identifiers from moduleId instead (PROJ-011/T-239). curriculumSlug is
   // kept only for error-message context below.
-  const { curriculumId, qdrantSlug } = await resolveModule(pgClient, moduleId)
+  const { qdrantSlug } = await resolveModule(pgClient, moduleId)
   const questions = await listAssessmentQuestions(qdrantApiKey, qdrantSlug, moduleId, assessmentId)
   if (questions.length === 0) {
     throw new GradingError(`no assessment questions for ${curriculumSlug}/${moduleId}/${assessmentId}`)
   }
-  await assertEntitled(pgClient, traineeSub, curriculumId)
   const qIds = new Set(questions.map((q) => q.id))
   const answered = new Set(Object.keys(answers))
   const missing = [...qIds].filter((id) => !answered.has(id))

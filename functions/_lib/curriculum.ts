@@ -1,5 +1,5 @@
 // PROJ-011/T-239: resolves a module_id to the identifiers assessment
-// serving/grading/entitlement actually need, now that curriculum.slug no
+// serving/grading actually need, now that curriculum.slug no
 // longer 1:1-identifies content. PROJ-011/T-227 merged 5 source curricula
 // (prompt-engineering/code-ai/applied-ai/finops/governance) onto one
 // `academy-ai` curriculum row, leaving the 5 source rows in place but
