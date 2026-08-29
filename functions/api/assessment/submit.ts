@@ -14,7 +14,6 @@ import { handleOptions, json } from '../../_lib/env'
 import { AuthError, verifyTraineeSub } from '../../_lib/jwt'
 import { verifyBetterAuthTraineeSub } from '../../_lib/betterAuthJwt'
 import { MissingConfig, withClient } from '../../_lib/db'
-import { NotEntitled } from '../../_lib/entitlement'
 import { gradeAssessment, GradingError } from '../../_lib/grading'
 import { QdrantError } from '../../_lib/qdrant'
 import { ModuleNotFound } from '../../_lib/curriculum'
@@ -32,12 +31,12 @@ export const onRequestOptions: PagesFunction<Env> = async (context) => handleOpt
 export const onRequestPost: PagesFunction<Env> = async (context) => {
   const { request, env } = context
   const origin = request.headers.get('Origin')
-  let traineeSub: string
   try {
-    traineeSub =
-      env.AUTH_PRODUCT === 'better-auth'
-        ? await verifyBetterAuthTraineeSub(request.headers.get('Authorization'), env.NEON_AUTH_URL!)
-        : await verifyTraineeSub(request.headers.get('Authorization'), env.STACK_PROJECT_ID)
+    if (env.AUTH_PRODUCT === 'better-auth') {
+      await verifyBetterAuthTraineeSub(request.headers.get('Authorization'), env.NEON_AUTH_URL!)
+    } else {
+      await verifyTraineeSub(request.headers.get('Authorization'), env.STACK_PROJECT_ID)
+    }
   } catch (e) {
     if (e instanceof AuthError) return json({ error: e.message }, 401, origin)
     throw e
@@ -67,12 +66,7 @@ export const onRequestPost: PagesFunction<Env> = async (context) => {
         module_id,
         assessment_id,
         answers,
-        traineeSub,
       )
-      // Own transaction: the entitlement checks above already committed
-      // (and reverted SET LOCAL ROLE) by the time gradeAssessment returns,
-      // so this runs at the connection's normal (admin) privilege — same
-      // requirement submit.py's separate psycopg.connect() call has.
       await client.query('SELECT academy.record_assessment_result($1, $2, $3)', [
         claim_id,
         grade.correct,
@@ -92,7 +86,6 @@ export const onRequestPost: PagesFunction<Env> = async (context) => {
     )
   } catch (e) {
     if (e instanceof ModuleNotFound) return json({ error: e.message }, 404, origin)
-    if (e instanceof NotEntitled) return json({ error: e.message }, 403, origin)
     if (e instanceof GradingError) return json({ error: e.message }, 400, origin)
     if (e instanceof QdrantError) return json({ error: e.message }, 502, origin)
     if (e instanceof MissingConfig) return json({ error: e.message }, 500, origin)
