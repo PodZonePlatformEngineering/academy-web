@@ -43,6 +43,13 @@ export const ALLOWED_ORIGINS = [
   // (this repo's `qa` branch), so QA's e2e suite exercises the actual
   // production assessment code path instead of a duplicated copy.
   'https://academy-frontend-qa.pages.dev',
+  // ACP-474 (2026-09-02) — qa.vibecreations.net is the QA custom-domain
+  // host academy-frontend-vibe-qa actually serves from (distinct from the
+  // raw academy-frontend-qa.pages.dev project URL above); missing here was
+  // the root cause of a live "Failed to fetch"/CORS preflight failure
+  // against /api/assessment/questions, same bug class as ACP-473's
+  // academy-api fix.
+  'https://qa.vibecreations.net',
 ]
 
 function corsHeaders(origin: string | null): Record<string, string> {
